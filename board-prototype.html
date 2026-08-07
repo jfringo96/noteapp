@@ -100,8 +100,9 @@ body{ display:flex; flex-direction:column; }
   border:1px solid transparent;
   border-radius:6px;
   padding:4px 7px;
-  min-width:0;
-  width:100%;
+  flex:0 1 22ch;
+  width:auto;
+  min-width:7ch;
   max-width:22ch;
 }
 .title:hover{ border-color:var(--bar-line); }
@@ -395,6 +396,186 @@ body{ display:flex; flex-direction:column; }
 .swatch-label::placeholder{ color:var(--paper-ink-dim); }
 .swatch-label:focus{ box-shadow:inset 0 0 0 2px var(--accent-soft); text-align:left; }
 
+/* --- board card ----------------------------------------------------------
+   A door, not content: tinted panel, accent hinge down the leading edge,
+   enter glyph, and an arrow out to the right.
+--------------------------------------------------------------------------- */
+.card-board .body{ padding:0; }
+
+.board-open{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  background:#eae3d4;
+  border-left:3px solid var(--accent);
+  cursor:pointer;
+  transition:background .12s ease;
+}
+.board-open:hover{ background:#e3dbc8; }
+.board-open:focus-visible{ outline:2px solid var(--accent); outline-offset:-3px; }
+
+.board-glyph{
+  flex:none;
+  display:flex;
+  color:var(--accent);
+}
+.board-meta{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.board-title{
+  font:inherit;
+  font-size:var(--fs-base);
+  font-weight:600;
+  letter-spacing:-.01em;
+  color:var(--paper-ink);
+  background:transparent;
+  border:0;
+  outline:none;
+  padding:2px 4px;
+  margin-left:-4px;
+  border-radius:4px;
+  width:100%;
+  min-width:0;
+  cursor:text;
+}
+.board-title:hover{ background:rgba(0,0,0,.05); }
+.board-title:focus{ background:var(--paper); box-shadow:inset 0 0 0 2px var(--accent-soft); }
+.board-count{
+  font-size:var(--fs-xs);
+  color:var(--paper-ink-dim);
+  padding-left:0;
+}
+.board-arrow{
+  flex:none;
+  font-size:15px;
+  line-height:1;
+  color:var(--accent);
+  opacity:.75;
+}
+
+.board-open.broken{
+  background:rgba(185,97,79,.12);
+  border-left-color:var(--danger);
+  cursor:default;
+}
+.board-open.broken:hover{ background:rgba(185,97,79,.12); }
+.board-open.broken .board-glyph{ color:var(--danger); }
+.board-broken-title{
+  font-size:var(--fs-sm);
+  font-weight:600;
+  color:var(--danger);
+}
+.board-broken-id{
+  font-size:var(--fs-xs);
+  color:var(--paper-ink-dim);
+  word-break:break-all;
+}
+
+/* ---------------------------------------------------------------------------
+   Breadcrumbs
+   A record of the route clicked, not a position in a tree.
+--------------------------------------------------------------------------- */
+.crumbs{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  min-width:0;
+  flex:0 1 auto;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.crumbs::-webkit-scrollbar{ display:none; }
+
+.crumb{
+  font:inherit;
+  font-size:var(--fs-sm);
+  color:var(--ink-dim);
+  background:transparent;
+  border:0;
+  border-radius:5px;
+  padding:5px 6px;
+  cursor:pointer;
+  white-space:nowrap;
+  max-width:15ch;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  transition:background .12s ease, color .12s ease;
+}
+.crumb:hover{ background:var(--bar-2); color:var(--ink); }
+.crumb-sep{
+  flex:none;
+  font-size:var(--fs-sm);
+  color:var(--ink-faint);
+  user-select:none;
+}
+.crumb-more{
+  flex:none;
+  font-size:var(--fs-sm);
+  color:var(--ink-faint);
+  padding:0 2px;
+  user-select:none;
+}
+
+/* ---------------------------------------------------------------------------
+   Board switcher
+--------------------------------------------------------------------------- */
+.switcher{
+  position:fixed;
+  z-index:700;
+  min-width:230px;
+  max-width:min(320px, calc(100vw - 20px));
+  max-height:min(60vh, 420px);
+  overflow-y:auto;
+  padding:4px;
+  background:var(--bar-2);
+  border:1px solid var(--bar-line);
+  border-radius:9px;
+  box-shadow:0 14px 34px -8px rgba(0,0,0,.75);
+}
+.switcher-row{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  width:100%;
+  font:inherit;
+  font-size:var(--fs-sm);
+  text-align:left;
+  color:var(--ink);
+  background:transparent;
+  border:0;
+  border-radius:5px;
+  padding:8px 9px;
+  cursor:pointer;
+}
+.switcher-row:hover{ background:#333a42; }
+.switcher-row[aria-current="true"]{ background:var(--accent-soft); }
+.switcher-name{
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.switcher-count{
+  flex:none;
+  font-size:var(--fs-xs);
+  font-variant-numeric:tabular-nums;
+  color:var(--ink-faint);
+}
+.switcher-sep{
+  height:1px;
+  margin:4px 6px;
+  background:var(--bar-line);
+}
+.switcher-new{ color:var(--accent); font-weight:600; }
+
 /* ---------------------------------------------------------------------------
    Card-type picker (double-click / double-tap on empty canvas)
 --------------------------------------------------------------------------- */
@@ -527,15 +708,21 @@ body{ display:flex; flex-direction:column; }
 <header class="bar">
   <div class="bar-left">
     <span class="mark" aria-hidden="true"></span>
-    <input id="title" class="title" type="text" value="Untitled board" aria-label="Board title" spellcheck="false">
+    <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+    <input id="title" class="title" type="text" value="Home" aria-label="Board title" spellcheck="false">
   </div>
 
   <div class="bar-right">
+    <div class="group" role="group" aria-label="Boards">
+      <button class="btn" id="boardsBtn" aria-haspopup="menu" aria-expanded="false"
+              title="Switch board">Boards &#9662;</button>
+    </div>
     <div class="group" role="group" aria-label="Add card">
       <button class="btn" data-add="text">Text</button>
       <button class="btn" data-add="list">List</button>
       <button class="btn" data-add="image">Image</button>
       <button class="btn" data-add="swatch">Swatch</button>
+      <button class="btn" data-add="board">Board</button>
     </div>
     <div class="group" role="group" aria-label="History">
       <button class="btn icon" id="undoBtn" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)">&#8630;</button>
@@ -582,15 +769,23 @@ const MIN_SIZE = {
   text:   { w: 140, h: 84 },
   list:   { w: 150, h: 74 },
   image:  { w:  80, h: 60 },
-  swatch: { w: 112, h: 96 }
+  swatch: { w: 112, h: 96 },
+  board:  { w: 160, h: 82 }
 };
 
 const DEFAULT_SIZE = {
   text:   { w: 260, h: 150 },
   list:   { w: 250, h: 150 },
   image:  { w: 260, h: 180 },
-  swatch: { w: 150, h: 150 }
+  swatch: { w: 150, h: 150 },
+  board:  { w: 230, h: 96 }
 };
+
+const CARD_TYPES = ["text", "list", "image", "swatch", "board"];
+
+/* How many crumbs to keep. Boards can point at each other in a cycle, so the
+   trail is capped rather than allowed to grow with every lap. */
+const TRAIL_MAX = 10;
 
 const uid = prefix => prefix + "_" + Math.random().toString(36).slice(2, 9);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -773,6 +968,7 @@ function makeCard(type, x, y, extra) {
   if (type === "list")   Object.assign(card, { items: [{ id: uid("i"), text: "", checked: false }], checkable: false });
   if (type === "image")  Object.assign(card, { dataUrl: "", alt: "" });
   if (type === "swatch") Object.assign(card, { colour: "#c9a227", label: "" });
+  if (type === "board")  Object.assign(card, { targetBoardId: "" });
 
   Object.assign(card, extra || {});
 
@@ -814,6 +1010,8 @@ function viewportCentre(type) {
 const scroller   = document.getElementById("scroller");
 const canvas     = document.getElementById("canvas");
 const titleInput = document.getElementById("title");
+const crumbs     = document.getElementById("crumbs");
+const boardsBtn  = document.getElementById("boardsBtn");
 const undoBtn    = document.getElementById("undoBtn");
 const redoBtn    = document.getElementById("redoBtn");
 const emptyState = document.getElementById("empty");
@@ -844,6 +1042,8 @@ function updateChrome() {
   redoBtn.disabled = redoStack.length === 0;
   emptyState.classList.toggle("show", currentBoard().cards.length === 0);
   if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
+  renderBreadcrumbs();
+  if (switcherEl) openSwitcher();          // keep counts and names live
 }
 
 /* Cards only ever grow to fit their content, never shrink — a height you set
@@ -879,6 +1079,7 @@ function buildCard(card) {
   if (card.type === "list")   buildList(card, el, body);
   if (card.type === "image")  buildImage(card, el, body);
   if (card.type === "swatch") buildSwatch(card, el, body);
+  if (card.type === "board")  buildBoardLink(card, el, body);
 
   const handle = document.createElement("div");
   handle.className = "resize";
@@ -1135,6 +1336,294 @@ function buildSwatch(card, el, body) {
   body.appendChild(foot);
 }
 
+/* --- board card ----------------------------------------------------------
+   A link, not a container. The card holds only targetBoardId; the title and
+   the count are read from the target board every render, so renaming a board
+   updates every card pointing at it and nothing is ever duplicated.
+--------------------------------------------------------------------------- */
+
+const ENTER_GLYPH =
+  '<svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true">' +
+  '<path d="M11.5 3.5H5.5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h6" fill="none" ' +
+  'stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+  '<path d="M13.5 7l3 3-3 3M16.5 10H8.5" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function buildBoardLink(card, el, body) {
+  const target = state.boards[card.targetBoardId];
+
+  const open = document.createElement("div");
+  open.className = "board-open";
+
+  const glyph = document.createElement("span");
+  glyph.className = "board-glyph";
+  glyph.innerHTML = ENTER_GLYPH;
+  open.appendChild(glyph);
+
+  const meta = document.createElement("div");
+  meta.className = "board-meta";
+  open.appendChild(meta);
+
+  /* Dangling reference: show it plainly rather than throwing. Deleting a
+     board is not possible in the prototype, but an imported file can carry
+     a link to a board that is not in it. */
+  if (!target) {
+    open.classList.add("broken");
+    const t = document.createElement("span");
+    t.className = "board-broken-title";
+    t.textContent = "Missing board";
+    const idLine = document.createElement("span");
+    idLine.className = "board-broken-id";
+    idLine.textContent = card.targetBoardId || "no target set";
+    meta.appendChild(t);
+    meta.appendChild(idLine);
+    body.appendChild(open);
+    return;
+  }
+
+  const title = document.createElement("input");
+  title.type = "text";
+  title.className = "board-title";
+  title.value = target.title;
+  title.placeholder = "Board name";
+  title.spellcheck = false;
+  title.setAttribute("aria-label", "Board name");
+
+  /* Editing the name must not open the board. pointerdown still bubbles, so
+     clicking the title selects the card like any other click. */
+  title.addEventListener("click", e => e.stopPropagation());
+  title.addEventListener("focus", stashEdit);
+  title.addEventListener("input", () => {
+    stashEdit();
+    const t = state.boards[card.targetBoardId];
+    if (!t) return;
+    t.title = title.value;
+    refreshBoardLabels(title);          // other cards pointing here, and the crumbs
+  });
+  title.addEventListener("blur", commitEdit);
+  title.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); title.blur(); }
+  });
+
+  const count = document.createElement("span");
+  count.className = "board-count";
+  count.textContent = cardCountLabel(target);
+
+  meta.appendChild(title);
+  meta.appendChild(count);
+
+  const arrow = document.createElement("span");
+  arrow.className = "board-arrow";
+  arrow.textContent = "→";
+  arrow.setAttribute("aria-hidden", "true");
+  open.appendChild(arrow);
+
+  open.setAttribute("role", "link");
+  open.tabIndex = 0;
+  open.title = "Open " + target.title;
+  open.addEventListener("click", () => navigateTo(card.targetBoardId));
+  open.addEventListener("keydown", e => {
+    /* Only when the link itself has focus. Keystrokes inside the title input
+       bubble up here, and a space in a board name is not an activation. */
+    if (e.target !== open) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      navigateTo(card.targetBoardId);
+    }
+  });
+
+  body.appendChild(open);
+}
+
+const cardCountLabel = b => b.cards.length + (b.cards.length === 1 ? " card" : " cards");
+
+/* Keep every visible reference to a board title in sync while it is being
+   typed, without a re-render — a re-render would kill the caret. */
+function refreshBoardLabels(except) {
+  currentBoard().cards.forEach(c => {
+    if (c.type !== "board") return;
+    const el = elements.get(c.id);
+    const t = state.boards[c.targetBoardId];
+    if (!el || !t) return;
+    const input = el.querySelector(".board-title");
+    if (input && input !== except) input.value = t.title;
+    const count = el.querySelector(".board-count");
+    if (count) count.textContent = cardCountLabel(t);
+  });
+  renderBreadcrumbs();
+  if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
+}
+
+/* Creating a board card creates the board too, in one history entry. Note
+   this mutates two boards at once — the current one gains a card, and a new
+   board appears — which is the case afterHistoryJump() has to resolve. */
+function addBoardCard(x, y) {
+  const name = prompt("Name for the new board", "New board");
+  if (name === null) return;                       // cancelled
+  const id = uid("b");
+  const card = makeCard("board", x, y, { targetBoardId: id });
+  applyChange(() => {
+    state.boards[id] = { id: id, title: name.trim() || "New board", cards: [] };
+    currentBoard().cards.push(card);
+  });
+  select(card.id);
+  updateChrome();
+}
+
+/* ---------------------------------------------------------------------------
+   Navigation
+   Never goes through applyChange() — moving between boards is not an
+   undoable action.
+--------------------------------------------------------------------------- */
+
+let trail = ["b_home"];
+
+function navigateTo(boardId, mode) {
+  if (!state.boards[boardId]) return;
+  /* Seal any open edit first. Otherwise its snapshot, taken on the board we
+     are leaving, would later differ from the live state only by
+     currentBoardId — and mere navigation would land in the undo stack. */
+  commitEdit();
+  if (boardId === state.currentBoardId) {
+    closeSwitcher();
+    renderBreadcrumbs();            // the trail may still have been truncated
+    return;
+  }
+
+  state.currentBoardId = boardId;
+  if (mode === "reset") trail = [boardId];
+  else if (mode !== "keep") {       // "keep" = the caller already set the trail
+    trail.push(boardId);
+    if (trail.length > TRAIL_MAX) trail.shift();
+  }
+
+  selectedId = null;
+  closePicker();
+  closeSwitcher();
+  render();
+  scrollToContent();
+}
+
+/* Repair the trail against reality: after an import, or an undo that jumped
+   to another board, it can name boards that are gone or end somewhere other
+   than where we are. */
+function normaliseTrail() {
+  trail = trail.filter(id => state.boards[id]);
+  if (trail[trail.length - 1] !== state.currentBoardId) {
+    const i = trail.lastIndexOf(state.currentBoardId);
+    if (i > -1) trail.length = i + 1;
+    else trail = [state.currentBoardId];
+  }
+  if (trail.length > TRAIL_MAX) trail = trail.slice(-TRAIL_MAX);
+}
+
+function renderBreadcrumbs() {
+  normaliseTrail();
+  crumbs.replaceChildren();
+
+  /* Everything up to the last crumb is a button; the last crumb is the
+     editable title input that already sits after this element. */
+  trail.slice(0, -1).forEach((id, i) => {
+    const b = state.boards[id];
+    const crumb = document.createElement("button");
+    crumb.type = "button";
+    crumb.className = "crumb";
+    crumb.textContent = b.title || "Untitled";
+    crumb.title = "Back to " + (b.title || "Untitled");
+    crumb.addEventListener("click", () => {
+      trail.length = i + 1;                       // clicking a crumb truncates
+      navigateTo(id, "keep");
+    });
+    crumbs.appendChild(crumb);
+
+    const sep = document.createElement("span");
+    sep.className = "crumb-sep";
+    sep.textContent = "/";
+    sep.setAttribute("aria-hidden", "true");
+    crumbs.appendChild(sep);
+  });
+}
+
+/* ---------------------------------------------------------------------------
+   Board switcher
+--------------------------------------------------------------------------- */
+
+let switcherEl = null;
+
+function closeSwitcher() {
+  if (!switcherEl) return;
+  switcherEl.remove();
+  switcherEl = null;
+  boardsBtn.setAttribute("aria-expanded", "false");
+}
+
+function openSwitcher() {
+  const wasOpen = !!switcherEl;      // a refresh must not steal focus back
+  closeSwitcher();
+  const menu = document.createElement("div");
+  menu.className = "switcher";
+  menu.setAttribute("role", "menu");
+
+  Object.keys(state.boards).forEach(id => {
+    const b = state.boards[id];
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "switcher-row";
+    row.setAttribute("role", "menuitem");
+    row.dataset.boardId = id;
+    if (id === state.currentBoardId) row.setAttribute("aria-current", "true");
+
+    const name = document.createElement("span");
+    name.className = "switcher-name";
+    name.textContent = b.title || "Untitled";
+
+    const count = document.createElement("span");
+    count.className = "switcher-count";
+    count.textContent = cardCountLabel(b);
+
+    row.appendChild(name);
+    row.appendChild(count);
+    /* Jumping is not walking, so the trail restarts here. This is also the
+       only route back to a board whose link card has been deleted. */
+    row.addEventListener("click", () => navigateTo(id, "reset"));
+    menu.appendChild(row);
+  });
+
+  const sep = document.createElement("div");
+  sep.className = "switcher-sep";
+  menu.appendChild(sep);
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "switcher-row switcher-new";
+  add.setAttribute("role", "menuitem");
+  add.id = "newBoardBtn";
+  add.textContent = "+  New board";
+  add.addEventListener("click", newStandaloneBoard);
+  menu.appendChild(add);
+
+  document.body.appendChild(menu);
+  switcherEl = menu;
+  boardsBtn.setAttribute("aria-expanded", "true");
+
+  const r = boardsBtn.getBoundingClientRect();
+  const m = menu.getBoundingClientRect();
+  menu.style.top = (r.bottom + 6) + "px";
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - m.width - 8)) + "px";
+  if (!wasOpen) menu.querySelector("button").focus();
+}
+
+/* Standalone: no card anywhere points at it. Reachable only from here. */
+function newStandaloneBoard() {
+  const name = prompt("Name for the new board", "New board");
+  if (name === null) return;
+  const id = uid("b");
+  applyChange(() => {
+    state.boards[id] = { id: id, title: name.trim() || "New board", cards: [] };
+  });
+  navigateTo(id, "reset");
+}
+
 /* ---------------------------------------------------------------------------
    Drag
    Moves the element with transform during the gesture — starting from
@@ -1260,7 +1749,8 @@ function openPicker(pt) {
   menu.className = "picker";
   menu.setAttribute("role", "menu");
 
-  [["text", "Text"], ["list", "List"], ["image", "Image"], ["swatch", "Swatch"]]
+  [["text", "Text"], ["list", "List"], ["image", "Image"], ["swatch", "Swatch"],
+   ["board", "Board"]]
     .forEach(([type, label]) => {
       const b = document.createElement("button");
       b.type = "button";
@@ -1274,6 +1764,8 @@ function openPicker(pt) {
         if (type === "image") {
           pendingImagePoint = pt;
           imageInput.click();
+        } else if (type === "board") {
+          addBoardCard(pt.x, pt.y);
         } else {
           addCard(type, pt.x, pt.y);
         }
@@ -1330,6 +1822,7 @@ document.addEventListener("keydown", e => {
   const key = e.key.toLowerCase();
 
   if (e.key === "Escape") {
+    if (switcherEl) { closeSwitcher(); boardsBtn.focus(); return; }
     if (pickerEl) { closePicker(); return; }
     if (isEditable(document.activeElement)) document.activeElement.blur();
     return;
@@ -1441,9 +1934,13 @@ imageInput.addEventListener("change", () => {
 
 document.getElementById("exportBtn").addEventListener("click", () => {
   commitEdit();
-  const slug = (currentBoard().title || "board").trim().toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "board";
-  const blob = new Blob([JSON.stringify(currentBoard(), null, 2)], { type: "application/json" });
+  /* The whole state, so nesting survives the round trip. Named after the
+     first board in the map, since the file is every board, not the one
+     currently on screen. */
+  const rootTitle = state.boards[Object.keys(state.boards)[0]].title;
+  const slug = (rootTitle || "boards").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "boards";
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1464,23 +1961,23 @@ jsonInput.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onerror = () => toast("Could not read that file.");
   reader.onload = () => {
-    let incoming;
+    let incoming, migrated;
     try {
-      incoming = normaliseBoard(JSON.parse(String(reader.result)));
+      const raw = JSON.parse(String(reader.result));
+      migrated = isLegacyBoardFile(raw);
+      incoming = normaliseState(raw);
     } catch (err) {
       toast("Not a valid board file.");
       return;
     }
-    applyChange(() => {
-      const id = state.currentBoardId;
-      state.boards[id] = Object.assign({}, incoming, { id });
-    });
+    applyChange(() => { state = incoming; });
     selectedId = null;
+    trail = [state.currentBoardId];
     titleInput.value = currentBoard().title;
-    scrollToContent();
     render();
-    const n = currentBoard().cards.length;
-    toast("Imported " + n + " card" + (n === 1 ? "" : "s"));
+    scrollToContent();
+    const n = Object.keys(state.boards).length;
+    toast((migrated ? "Migrated " : "Imported ") + n + " board" + (n === 1 ? "" : "s"));
   };
   reader.readAsText(file);
 });
@@ -1488,12 +1985,42 @@ jsonInput.addEventListener("change", () => {
 const num = (v, fallback) => (typeof v === "number" && isFinite(v) ? v : fallback);
 const str = (v, fallback) => (typeof v === "string" ? v : fallback);
 
-function normaliseBoard(raw) {
+/* The pre-addendum export shape: a single bare board, no `boards` map. */
+function isLegacyBoardFile(raw) {
+  return !!raw && typeof raw === "object" && Array.isArray(raw.cards) && !raw.boards;
+}
+
+function normaliseState(raw) {
+  if (!raw || typeof raw !== "object") throw new Error("Not a board file");
+
+  /* Migrate an old single-board export: wrap it into `boards` under its own
+     id and make it current, so files exported before this change still open. */
+  if (isLegacyBoardFile(raw)) {
+    const board = normaliseBoard(raw);
+    const boards = {};
+    boards[board.id] = board;
+    return { currentBoardId: board.id, boards: boards };
+  }
+
+  if (!raw.boards || typeof raw.boards !== "object") throw new Error("Not a board file");
+  const boards = {};
+  Object.keys(raw.boards).forEach(key => {
+    const board = normaliseBoard(raw.boards[key], key);
+    boards[board.id] = board;
+  });
+  if (!Object.keys(boards).length) throw new Error("No boards");
+
+  let current = str(raw.currentBoardId, "");
+  if (!boards[current]) current = Object.keys(boards)[0];
+  return { currentBoardId: current, boards: boards };
+}
+
+function normaliseBoard(raw, fallbackId) {
   if (!raw || typeof raw !== "object" || !Array.isArray(raw.cards)) {
     throw new Error("Not a board");
   }
   const cards = raw.cards.map(c => {
-    const type = ["text", "list", "image", "swatch"].includes(c && c.type) ? c.type : "text";
+    const type = CARD_TYPES.includes(c && c.type) ? c.type : "text";
     const min = MIN_SIZE[type];
     const card = {
       id: str(c.id, "") || uid("c"),
@@ -1526,10 +2053,16 @@ function normaliseBoard(raw) {
       card.colour = /^#[0-9a-f]{6}$/i.test(colour) ? colour : "#c9a227";
       card.label = str(c.label, "");
     }
+    if (type === "board") {
+      /* Kept even when it resolves to nothing — the card renders as a broken
+         link rather than being silently dropped. */
+      card.targetBoardId = str(c.targetBoardId, "");
+    }
     return card;
   });
 
-  return { id: str(raw.id, "b_home"), title: str(raw.title, "Untitled board"), cards };
+  const id = str(raw.id, "") || str(fallbackId, "") || uid("b");
+  return { id: id, title: str(raw.title, "Untitled board"), cards: cards };
 }
 
 /* ---------------------------------------------------------------------------
@@ -1555,12 +2088,23 @@ document.querySelectorAll("[data-add]").forEach(btn => {
     const type = btn.dataset.add;
     const pt = viewportCentre(type);
     if (type === "image") { pendingImagePoint = pt; imageInput.click(); return; }
+    if (type === "board") { addBoardCard(pt.x, pt.y); return; }
     addCard(type, pt.x, pt.y);
   });
 });
 
 undoBtn.addEventListener("click", undo);
 redoBtn.addEventListener("click", redo);
+
+boardsBtn.addEventListener("click", () => {
+  if (switcherEl) closeSwitcher(); else openSwitcher();
+});
+
+document.addEventListener("pointerdown", e => {
+  if (!switcherEl) return;
+  if (switcherEl.contains(e.target) || boardsBtn.contains(e.target)) return;
+  closeSwitcher();
+}, true);
 
 /* ---------------------------------------------------------------------------
    Toast
