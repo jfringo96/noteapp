@@ -571,7 +571,7 @@ body{ display:flex; flex-direction:column; }
    Board prototype — Phase 1, no persistence.
 
    Everything the real app should be able to lift lives above the "wiring"
-   line: the board object, applyChange(), the history model, and the gesture
+   line: the state object, applyChange(), the history model, and the gesture
    handlers. The DOM building below is prototype scaffolding.
    =========================================================================== */
 
@@ -597,14 +597,22 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /* ---------------------------------------------------------------------------
    State
-   The entire board is one plain object. Nothing else is authoritative.
+   One plain object holds everything. Nothing else is authoritative.
+
+   Boards are stored FLAT, keyed by id. A board never contains another
+   board's cards — nesting is by reference only (a card holding a
+   targetBoardId), so a board can be linked from several places and two
+   boards can point at each other without the data becoming a tree.
 --------------------------------------------------------------------------- */
 
-let board = {
-  id: "b_proto",
-  title: "Untitled board",
-  cards: []
+let state = {
+  currentBoardId: "b_home",
+  boards: {
+    b_home: { id: "b_home", title: "Home", cards: [] }
+  }
 };
+
+const currentBoard = () => state.boards[state.currentBoardId];
 
 const undoStack = [];
 const redoStack = [];
@@ -621,9 +629,13 @@ let editSnapshot = null;
    applyChange — the single mutation entry point
 --------------------------------------------------------------------------- */
 
+/* Snapshots clone the WHOLE state, currentBoardId included. So undoing an
+   edit that was made on another board navigates back to that board to show
+   you the change, rather than silently altering something off-screen.
+   Navigation itself never goes through here — it is not undoable. */
 function applyChange(mutator) {
   commitEdit();                                 // seal any in-flight typing first
-  const before = structuredClone(board);
+  const before = structuredClone(state);
   mutator();
   undoStack.push(before);
   if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
@@ -635,7 +647,7 @@ function applyChange(mutator) {
    and the first input event can both call it safely. */
 function stashEdit() {
   if (editSnapshot) return;
-  editSnapshot = { snap: structuredClone(board), json: JSON.stringify(board) };
+  editSnapshot = { snap: structuredClone(state), json: JSON.stringify(state) };
 }
 
 /* End an editing session. Pushes exactly one history entry, and only if the
@@ -644,7 +656,7 @@ function commitEdit() {
   if (!editSnapshot) return;
   const { snap, json } = editSnapshot;
   editSnapshot = null;
-  if (json === JSON.stringify(board)) return;
+  if (json === JSON.stringify(state)) return;
   undoStack.push(snap);
   if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
   redoStack.length = 0;
@@ -654,26 +666,51 @@ function commitEdit() {
 function undo() {
   commitEdit();
   if (!undoStack.length) return;
-  redoStack.push(structuredClone(board));
-  board = undoStack.pop();
-  afterHistoryJump();
+  const leaving = structuredClone(state);
+  redoStack.push(leaving);
+  state = undoStack.pop();
+  afterHistoryJump(leaving);
 }
 
 function redo() {
   commitEdit();
   if (!redoStack.length) return;
-  undoStack.push(structuredClone(board));
-  board = redoStack.pop();
-  afterHistoryJump();
+  const leaving = structuredClone(state);
+  undoStack.push(leaving);
+  state = redoStack.pop();
+  afterHistoryJump(leaving);
 }
 
-function afterHistoryJump() {
+function afterHistoryJump(leaving) {
+  /* Land on the board the jump actually altered, so the change is never
+     applied off-screen.
+
+     A snapshot carries whichever board was on screen when it was recorded,
+     and that is not always the board that differs. Undoing gets it right for
+     free — that snapshot was taken by applyChange() at the moment of the
+     edit. Redoing does not: its snapshot was taken when you pressed undo, so
+     it names wherever you happened to be standing then. Diffing the two
+     states covers both directions without tracking extra metadata. */
+  const changed = changedBoardIds(leaving, state).filter(id => state.boards[id]);
+  if (changed.length && !changed.includes(state.currentBoardId)) {
+    state.currentBoardId = changed[0];
+  }
+  if (!currentBoard()) state.currentBoardId = Object.keys(state.boards)[0];
   if (selectedId && !getCard(selectedId)) selectedId = null;
-  titleInput.value = board.title;
+  titleInput.value = currentBoard().title;
   render();
 }
 
-const getCard = id => board.cards.find(c => c.id === id) || null;
+function changedBoardIds(a, b) {
+  const ids = new Set(Object.keys(a.boards).concat(Object.keys(b.boards)));
+  const out = [];
+  ids.forEach(id => {
+    if (JSON.stringify(a.boards[id]) !== JSON.stringify(b.boards[id])) out.push(id);
+  });
+  return out;
+}
+
+const getCard = id => currentBoard().cards.find(c => c.id === id) || null;
 
 /* ---------------------------------------------------------------------------
    Selection
@@ -686,9 +723,10 @@ function select(id) {
   if (selectedId === id) return;
   selectedId = id;
   if (id) {
-    const i = board.cards.findIndex(c => c.id === id);
-    if (i > -1 && i !== board.cards.length - 1) {
-      board.cards.push(board.cards.splice(i, 1)[0]);
+    const cards = currentBoard().cards;
+    const i = cards.findIndex(c => c.id === id);
+    if (i > -1 && i !== cards.length - 1) {
+      cards.push(cards.splice(i, 1)[0]);
     }
   }
   refreshStacking();
@@ -698,7 +736,7 @@ function select(id) {
    rebuilding on pointerdown would destroy the element the click is landing on
    and swallow focus for textareas and inputs. */
 function refreshStacking() {
-  board.cards.forEach((card, i) => {
+  currentBoard().cards.forEach((card, i) => {
     const el = elements.get(card.id);
     if (!el) return;
     el.style.zIndex = String(i + 1);
@@ -709,7 +747,8 @@ function refreshStacking() {
 function deleteCard(id) {
   if (!getCard(id)) return;
   applyChange(() => {
-    board.cards = board.cards.filter(c => c.id !== id);
+    const b = currentBoard();
+    b.cards = b.cards.filter(c => c.id !== id);
   });
   if (selectedId === id) selectedId = null;
   refreshStacking();
@@ -744,7 +783,7 @@ function makeCard(type, x, y, extra) {
 
 function addCard(type, x, y, extra) {
   const card = makeCard(type, x, y, extra);
-  applyChange(() => { board.cards.push(card); });
+  applyChange(() => { currentBoard().cards.push(card); });
   select(card.id);
   updateChrome();
 
@@ -788,7 +827,7 @@ function render() {
   elements.forEach(el => el.remove());
   elements.clear();
 
-  board.cards.forEach((card, i) => {
+  currentBoard().cards.forEach((card, i) => {
     const el = buildCard(card);
     el.style.zIndex = String(i + 1);
     elements.set(card.id, el);
@@ -796,15 +835,15 @@ function render() {
   });
 
   refreshStacking();
-  board.cards.forEach(card => grow(card, elements.get(card.id)));
+  currentBoard().cards.forEach(card => grow(card, elements.get(card.id)));
   updateChrome();
 }
 
 function updateChrome() {
   undoBtn.disabled = undoStack.length === 0;
   redoBtn.disabled = redoStack.length === 0;
-  emptyState.classList.toggle("show", board.cards.length === 0);
-  if (document.activeElement !== titleInput) titleInput.value = board.title;
+  emptyState.classList.toggle("show", currentBoard().cards.length === 0);
+  if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
 }
 
 /* Cards only ever grow to fit their content, never shrink — a height you set
@@ -1402,9 +1441,9 @@ imageInput.addEventListener("change", () => {
 
 document.getElementById("exportBtn").addEventListener("click", () => {
   commitEdit();
-  const slug = (board.title || "board").trim().toLowerCase()
+  const slug = (currentBoard().title || "board").trim().toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "board";
-  const blob = new Blob([JSON.stringify(board, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(currentBoard(), null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -1432,12 +1471,16 @@ jsonInput.addEventListener("change", () => {
       toast("Not a valid board file.");
       return;
     }
-    applyChange(() => { board = incoming; });
+    applyChange(() => {
+      const id = state.currentBoardId;
+      state.boards[id] = Object.assign({}, incoming, { id });
+    });
     selectedId = null;
-    titleInput.value = board.title;
+    titleInput.value = currentBoard().title;
     scrollToContent();
     render();
-    toast("Imported " + board.cards.length + " card" + (board.cards.length === 1 ? "" : "s"));
+    const n = currentBoard().cards.length;
+    toast("Imported " + n + " card" + (n === 1 ? "" : "s"));
   };
   reader.readAsText(file);
 });
@@ -1486,7 +1529,7 @@ function normaliseBoard(raw) {
     return card;
   });
 
-  return { id: str(raw.id, "b_proto"), title: str(raw.title, "Untitled board"), cards };
+  return { id: str(raw.id, "b_home"), title: str(raw.title, "Untitled board"), cards };
 }
 
 /* ---------------------------------------------------------------------------
@@ -1496,7 +1539,7 @@ function normaliseBoard(raw) {
 titleInput.addEventListener("focus", stashEdit);
 titleInput.addEventListener("input", () => {
   stashEdit();
-  board.title = titleInput.value;
+  currentBoard().title = titleInput.value;
 });
 titleInput.addEventListener("blur", commitEdit);
 titleInput.addEventListener("keydown", e => {
@@ -1536,21 +1579,22 @@ function toast(message) {
 --------------------------------------------------------------------------- */
 
 function scrollToContent() {
-  if (!board.cards.length) {
+  const cards = currentBoard().cards;
+  if (!cards.length) {
     scroller.scrollLeft = 80;
     scroller.scrollTop  = 80;
     return;
   }
-  const minX = Math.min(...board.cards.map(c => c.x));
-  const minY = Math.min(...board.cards.map(c => c.y));
+  const minX = Math.min(...cards.map(c => c.x));
+  const minY = Math.min(...cards.map(c => c.y));
   scroller.scrollLeft = Math.max(0, minX - 56);
   scroller.scrollTop  = Math.max(0, minY - 56);
 }
 
 /* Demo content, so the prototype is usable the moment it opens. Replace with
-   `board.cards = []` for a cold start. */
+   `cards: []` for a cold start. */
 function seed() {
-  board.cards = [
+  state.boards.b_home.cards = [
     {
       id: uid("c"), type: "text", x: 180, y: 150, w: 288, h: 168,
       text: "Double-click empty canvas for the card picker.\n\nDrag a card by the bar along its top edge. Select it to reveal the resize handle, bottom-right."
