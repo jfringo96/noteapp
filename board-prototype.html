@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Board — prototype</title>
+<!-- Empty data: icon so the browser never fires a /favicon.ico request. No network, at all. -->
+<link rel="icon" href="data:,">
+<style>
+/* ---------------------------------------------------------------------------
+   Tokens
+   One accent only (muted ochre). Dark ground so photographs and colour
+   swatches read accurately; cards are warm off-white paper above it.
+--------------------------------------------------------------------------- */
+:root{
+  --ground:        #15181b;
+  --ground-line:   rgba(255,255,255,.065);
+  --bar:           #1c2025;
+  --bar-2:         #23282e;
+  --bar-line:      #2e343b;
+  --ink:           #d9dee3;
+  --ink-dim:       #8b939c;
+  --ink-faint:     #666e77;
+
+  --paper:         #f4f1e9;
+  --paper-line:    #ddd6c6;
+  --paper-ink:     #23211d;
+  --paper-ink-dim: #6f6961;
+
+  --accent:        #bd8a55;
+  --accent-soft:   rgba(189,138,85,.28);
+  --danger:        #b9614f;
+
+  --fs-xs:  11.5px;
+  --fs-sm:  13px;
+  --fs-base:15px;
+  --fs-lg:  16.5px;
+
+  --radius: 10px;
+  --grip:   22px;
+  --shadow: 0 1px 1px rgba(0,0,0,.30), 0 10px 22px -8px rgba(0,0,0,.62);
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, "Noto Sans", sans-serif;
+}
+
+*{ box-sizing:border-box; }
+
+html,body{
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:var(--fs-base);
+  -webkit-text-size-adjust:100%;
+}
+
+body{ display:flex; flex-direction:column; }
+
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Top bar
+--------------------------------------------------------------------------- */
+.bar{
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:7px 12px;
+  padding-top:calc(7px + env(safe-area-inset-top, 0px));
+  background:var(--bar);
+  border-bottom:1px solid var(--bar-line);
+  z-index:100;
+}
+
+.bar-left{ display:flex; align-items:center; gap:9px; min-width:0; flex:1 1 auto; }
+
+.mark{
+  width:13px; height:13px; flex:none;
+  border-radius:3px;
+  background:var(--accent);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);
+}
+
+.title{
+  font:inherit;
+  font-size:var(--fs-lg);
+  font-weight:600;
+  letter-spacing:-.01em;
+  color:var(--ink);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:6px;
+  padding:4px 7px;
+  min-width:0;
+  width:100%;
+  max-width:22ch;
+}
+.title:hover{ border-color:var(--bar-line); }
+.title:focus{ border-color:var(--accent); outline:none; background:var(--bar-2); }
+
+.bar-right{ display:flex; align-items:center; gap:8px; flex:none; }
+
+.group{
+  display:flex;
+  gap:4px;
+  padding:3px;
+  background:var(--bar-2);
+  border:1px solid var(--bar-line);
+  border-radius:8px;
+}
+
+.btn{
+  font:inherit;
+  font-size:var(--fs-sm);
+  line-height:1;
+  color:var(--ink);
+  background:transparent;
+  border:0;
+  border-radius:5px;
+  padding:7px 10px;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background .12s ease, color .12s ease;
+}
+.btn:hover:not(:disabled){ background:#30363d; }
+.btn:active:not(:disabled){ background:#3a4149; }
+.btn:disabled{ color:var(--ink-faint); cursor:default; }
+.btn.icon{ padding:7px 9px; font-size:15px; }
+
+/* ---------------------------------------------------------------------------
+   Canvas
+   Fixed 3000x3000 area inside a scroller. Panning is native scroll.
+--------------------------------------------------------------------------- */
+.scroller{
+  flex:1 1 auto;
+  overflow:auto;
+  position:relative;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.scroller::-webkit-scrollbar{ width:11px; height:11px; }
+.scroller::-webkit-scrollbar-thumb{
+  background:#333a42; border-radius:6px; border:3px solid var(--ground);
+}
+.scroller::-webkit-scrollbar-thumb:hover{ background:#414a53; }
+.scroller::-webkit-scrollbar-corner{ background:var(--ground); }
+
+.canvas{
+  position:relative;
+  width:3000px;
+  height:3000px;
+  background-color:var(--ground);
+  background-image:radial-gradient(circle at 1px 1px, var(--ground-line) 1px, transparent 0);
+  background-size:26px 26px;
+}
+.canvas.drop-active{
+  box-shadow:inset 0 0 0 2px var(--accent-soft);
+}
+
+/* ---------------------------------------------------------------------------
+   Cards
+--------------------------------------------------------------------------- */
+.card{
+  position:absolute;
+  display:flex;
+  flex-direction:column;
+  background:var(--paper);
+  color:var(--paper-ink);
+  /* Cards are light even though the page is dark — without this, native
+     checkboxes and the colour input render in the page's dark scheme. */
+  color-scheme:light;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  transition:box-shadow .14s ease;
+}
+.card.selected{
+  box-shadow:0 0 0 2px var(--accent), var(--shadow);
+}
+.card.dragging{
+  box-shadow:0 0 0 2px var(--accent), 0 2px 4px rgba(0,0,0,.3), 0 22px 40px -10px rgba(0,0,0,.7);
+  transition:none;
+}
+
+/* Drag handle. Dragging from the body would fight text selection in textareas. */
+.grip{
+  flex:none;
+  height:var(--grip);
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 3px 0 0;
+  background:#e8e3d7;
+  border-bottom:1px solid var(--paper-line);
+  cursor:grab;
+  touch-action:none;          /* required for pointer-drag on touch */
+  user-select:none;
+  -webkit-user-select:none;
+}
+.card.dragging .grip{ cursor:grabbing; }
+.grip-rail{
+  flex:1 1 auto;
+  align-self:stretch;
+  background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,.20) 1px, transparent 0);
+  background-size:5px 5px;
+  background-position:center;
+  background-repeat:repeat-x;
+  min-width:10px;
+}
+.grip-btn{
+  flex:none;
+  font:inherit;
+  font-size:var(--fs-xs);
+  line-height:1;
+  color:var(--paper-ink-dim);
+  background:transparent;
+  border:0;
+  border-radius:4px;
+  padding:4px 5px;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.grip-btn:hover{ background:rgba(0,0,0,.09); color:var(--paper-ink); }
+.grip-btn.danger:hover{ background:rgba(185,97,79,.16); color:var(--danger); }
+.grip-btn[aria-pressed="true"]{ background:var(--accent-soft); color:#6a4a24; }
+
+.body{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.resize{
+  position:absolute;
+  right:0; bottom:0;
+  width:20px; height:20px;
+  cursor:nwse-resize;
+  touch-action:none;          /* required for pointer-drag on touch */
+  display:none;
+  z-index:2;
+}
+.card.selected .resize{ display:block; }
+.resize::after{
+  content:"";
+  position:absolute;
+  right:3px; bottom:3px;
+  width:9px; height:9px;
+  border-right:2px solid var(--accent);
+  border-bottom:2px solid var(--accent);
+  border-bottom-right-radius:3px;
+}
+
+/* --- text card ------------------------------------------------------------ */
+.text-field{
+  flex:1 1 auto;
+  width:100%;
+  font:inherit;
+  font-size:var(--fs-base);
+  line-height:1.55;
+  color:var(--paper-ink);
+  background:transparent;
+  border:0;
+  outline:none;
+  resize:none;
+  padding:9px 11px;
+  overflow:auto;
+}
+.text-field::placeholder{ color:var(--paper-ink-dim); }
+.text-field:focus{ box-shadow:inset 0 0 0 2px var(--accent-soft); }
+
+/* --- list card ------------------------------------------------------------ */
+.rows{
+  flex:1 1 auto;
+  overflow:auto;
+  padding:6px 8px 8px;
+}
+.row{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:26px;
+}
+.row .bullet{
+  flex:none;
+  width:15px;
+  text-align:center;
+  color:var(--paper-ink-dim);
+  font-size:var(--fs-base);
+  line-height:1;
+  user-select:none;
+}
+.row input[type="checkbox"]{
+  flex:none;
+  width:15px; height:15px;
+  margin:0;
+  accent-color:var(--accent);
+  cursor:pointer;
+}
+.row-input{
+  flex:1 1 auto;
+  min-width:0;
+  font:inherit;
+  font-size:var(--fs-sm);
+  line-height:1.5;
+  color:var(--paper-ink);
+  background:transparent;
+  border:0;
+  outline:none;
+  padding:4px 4px;
+  border-radius:4px;
+}
+.row-input::placeholder{ color:var(--paper-ink-dim); }
+.row-input:focus{ box-shadow:inset 0 0 0 2px var(--accent-soft); }
+.row.checked .row-input{ text-decoration:line-through; color:var(--paper-ink-dim); }
+
+/* --- image card ----------------------------------------------------------- */
+.image-wrap{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#e6e1d5;
+}
+.image-wrap img{
+  width:100%; height:100%;
+  object-fit:contain;
+  display:block;
+}
+.image-empty{
+  font-size:var(--fs-sm);
+  color:var(--paper-ink-dim);
+}
+
+/* --- swatch card ---------------------------------------------------------- */
+.swatch-block{
+  flex:1 1 auto;
+  min-height:0;
+  position:relative;
+  margin:8px 8px 0;
+  border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);
+}
+.swatch-colour{
+  position:absolute;
+  inset:0;
+  width:100%; height:100%;
+  opacity:0;
+  border:0; padding:0;
+  cursor:pointer;
+}
+.swatch-colour:focus-visible + .swatch-ring{
+  position:absolute; inset:0;
+  border-radius:6px;
+  box-shadow:0 0 0 2px var(--accent), inset 0 0 0 2px rgba(255,255,255,.5);
+}
+.swatch-foot{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px 8px;
+}
+.swatch-hex{
+  flex:none;
+  font-size:var(--fs-xs);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;
+  color:var(--paper-ink-dim);
+  text-transform:uppercase;
+}
+.swatch-label{
+  flex:1 1 auto;
+  min-width:0;
+  font:inherit;
+  font-size:var(--fs-sm);
+  color:var(--paper-ink);
+  background:transparent;
+  border:0;
+  outline:none;
+  padding:3px 4px;
+  border-radius:4px;
+  text-align:right;
+}
+.swatch-label::placeholder{ color:var(--paper-ink-dim); }
+.swatch-label:focus{ box-shadow:inset 0 0 0 2px var(--accent-soft); text-align:left; }
+
+/* ---------------------------------------------------------------------------
+   Card-type picker (double-click / double-tap on empty canvas)
+--------------------------------------------------------------------------- */
+.picker{
+  position:absolute;
+  z-index:500;
+  display:flex;
+  flex-direction:column;
+  padding:4px;
+  min-width:132px;
+  background:var(--bar-2);
+  border:1px solid var(--bar-line);
+  border-radius:9px;
+  box-shadow:0 12px 30px -8px rgba(0,0,0,.75);
+}
+.picker button{
+  font:inherit;
+  font-size:var(--fs-sm);
+  text-align:left;
+  color:var(--ink);
+  background:transparent;
+  border:0;
+  border-radius:5px;
+  padding:8px 10px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.picker button:hover{ background:#333a42; }
+.picker .dot{
+  width:9px; height:9px; border-radius:2px; flex:none;
+  background:var(--accent); opacity:.85;
+}
+
+/* ---------------------------------------------------------------------------
+   Chrome: unsaved notice, empty state, toast
+--------------------------------------------------------------------------- */
+.notice{
+  position:fixed;
+  left:12px;
+  bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index:200;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 11px;
+  font-size:var(--fs-xs);
+  line-height:1.35;
+  color:var(--ink-dim);
+  background:rgba(28,32,37,.9);
+  border:1px solid var(--bar-line);
+  border-radius:20px;
+  pointer-events:none;
+  max-width:calc(100vw - 24px);
+}
+.notice b{ color:var(--ink); font-weight:600; }
+.notice .pip{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--danger);
+  flex:none;
+}
+.notice-short{ display:none; }
+
+.empty{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  z-index:1;
+}
+.empty.show{ display:flex; }
+.empty span{
+  font-size:var(--fs-sm);
+  color:var(--ink-faint);
+  background:rgba(21,24,27,.8);
+  padding:8px 14px;
+  border-radius:20px;
+}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:calc(52px + env(safe-area-inset-bottom, 0px));
+  transform:translateX(-50%);
+  z-index:600;
+  padding:9px 15px;
+  font-size:var(--fs-sm);
+  color:var(--ink);
+  background:var(--bar-2);
+  border:1px solid var(--bar-line);
+  border-radius:8px;
+  box-shadow:0 10px 26px -8px rgba(0,0,0,.7);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease;
+}
+.toast.show{ opacity:1; }
+
+/* ---------------------------------------------------------------------------
+   Narrow screens
+--------------------------------------------------------------------------- */
+@media (max-width: 760px){
+  .bar{ flex-wrap:wrap; gap:7px; padding:6px 9px; padding-top:calc(6px + env(safe-area-inset-top, 0px)); }
+  .bar-left{ flex:1 1 100%; }
+  .title{ max-width:none; }
+  .bar-right{
+    flex:1 1 100%;
+    overflow-x:auto;
+    justify-content:flex-start;
+    padding-bottom:2px;
+    scrollbar-width:none;
+  }
+  .bar-right::-webkit-scrollbar{ display:none; }
+  .btn{ padding:8px 11px; }
+  .notice{ font-size:11px; padding:5px 9px; }
+  .notice-long{ display:none; }
+  .notice-short{ display:inline; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition-duration:.001ms !important; animation-duration:.001ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-left">
+    <span class="mark" aria-hidden="true"></span>
+    <input id="title" class="title" type="text" value="Untitled board" aria-label="Board title" spellcheck="false">
+  </div>
+
+  <div class="bar-right">
+    <div class="group" role="group" aria-label="Add card">
+      <button class="btn" data-add="text">Text</button>
+      <button class="btn" data-add="list">List</button>
+      <button class="btn" data-add="image">Image</button>
+      <button class="btn" data-add="swatch">Swatch</button>
+    </div>
+    <div class="group" role="group" aria-label="History">
+      <button class="btn icon" id="undoBtn" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)">&#8630;</button>
+      <button class="btn icon" id="redoBtn" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)">&#8631;</button>
+    </div>
+    <div class="group" role="group" aria-label="Transfer">
+      <button class="btn" id="exportBtn" title="Download the board as JSON">Export</button>
+      <button class="btn" id="importBtn" title="Load a board from a JSON file">Import</button>
+    </div>
+  </div>
+</header>
+
+<div class="scroller" id="scroller">
+  <div class="canvas" id="canvas"></div>
+  <div class="empty" id="empty"><span>Double-click the canvas to add a card</span></div>
+</div>
+
+<p class="notice" role="status">
+  <span class="pip" aria-hidden="true"></span>
+  <span class="notice-long"><b>Nothing is saved.</b> A refresh clears the board — use Export to keep it.</span>
+  <span class="notice-short"><b>Nothing is saved</b> — Export to keep it.</span>
+</p>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<input type="file" id="jsonInput" accept="application/json,.json" hidden>
+<input type="file" id="imageInput" accept="image/*" multiple hidden>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   Board prototype — Phase 1, no persistence.
+
+   Everything the real app should be able to lift lives above the "wiring"
+   line: the board object, applyChange(), the history model, and the gesture
+   handlers. The DOM building below is prototype scaffolding.
+   =========================================================================== */
+
+const CANVAS_SIZE   = 3000;
+const HISTORY_LIMIT = 50;
+
+const MIN_SIZE = {
+  text:   { w: 140, h: 84 },
+  list:   { w: 150, h: 74 },
+  image:  { w:  80, h: 60 },
+  swatch: { w: 112, h: 96 }
+};
+
+const DEFAULT_SIZE = {
+  text:   { w: 260, h: 150 },
+  list:   { w: 250, h: 150 },
+  image:  { w: 260, h: 180 },
+  swatch: { w: 150, h: 150 }
+};
+
+const uid = prefix => prefix + "_" + Math.random().toString(36).slice(2, 9);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/* ---------------------------------------------------------------------------
+   State
+   The entire board is one plain object. Nothing else is authoritative.
+--------------------------------------------------------------------------- */
+
+let board = {
+  id: "b_proto",
+  title: "Untitled board",
+  cards: []
+};
+
+const undoStack = [];
+const redoStack = [];
+
+let selectedId = null;
+
+/* Pending text-edit snapshot. Typing writes straight into state without
+   touching history; the snapshot taken when an editor gains focus is pushed
+   once, on blur, if anything actually changed. One history entry per
+   editing session. */
+let editSnapshot = null;
+
+/* ---------------------------------------------------------------------------
+   applyChange — the single mutation entry point
+--------------------------------------------------------------------------- */
+
+function applyChange(mutator) {
+  commitEdit();                                 // seal any in-flight typing first
+  const before = structuredClone(board);
+  mutator();
+  undoStack.push(before);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  render();
+}
+
+/* Begin an editing session. No-op if one is already open, so a focus event
+   and the first input event can both call it safely. */
+function stashEdit() {
+  if (editSnapshot) return;
+  editSnapshot = { snap: structuredClone(board), json: JSON.stringify(board) };
+}
+
+/* End an editing session. Pushes exactly one history entry, and only if the
+   content really moved. Does not render — the DOM is already correct. */
+function commitEdit() {
+  if (!editSnapshot) return;
+  const { snap, json } = editSnapshot;
+  editSnapshot = null;
+  if (json === JSON.stringify(board)) return;
+  undoStack.push(snap);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+  updateChrome();
+}
+
+function undo() {
+  commitEdit();
+  if (!undoStack.length) return;
+  redoStack.push(structuredClone(board));
+  board = undoStack.pop();
+  afterHistoryJump();
+}
+
+function redo() {
+  commitEdit();
+  if (!redoStack.length) return;
+  undoStack.push(structuredClone(board));
+  board = redoStack.pop();
+  afterHistoryJump();
+}
+
+function afterHistoryJump() {
+  if (selectedId && !getCard(selectedId)) selectedId = null;
+  titleInput.value = board.title;
+  render();
+}
+
+const getCard = id => board.cards.find(c => c.id === id) || null;
+
+/* ---------------------------------------------------------------------------
+   Selection
+   Single selection. Selecting brings the card to the end of the cards array
+   (= front). Deliberately not a history entry — see notes in the README
+   section of the commit message.
+--------------------------------------------------------------------------- */
+
+function select(id) {
+  if (selectedId === id) return;
+  selectedId = id;
+  if (id) {
+    const i = board.cards.findIndex(c => c.id === id);
+    if (i > -1 && i !== board.cards.length - 1) {
+      board.cards.push(board.cards.splice(i, 1)[0]);
+    }
+  }
+  refreshStacking();
+}
+
+/* Reorders z-index and the selection ring in place. Never rebuilds the DOM —
+   rebuilding on pointerdown would destroy the element the click is landing on
+   and swallow focus for textareas and inputs. */
+function refreshStacking() {
+  board.cards.forEach((card, i) => {
+    const el = elements.get(card.id);
+    if (!el) return;
+    el.style.zIndex = String(i + 1);
+    el.classList.toggle("selected", card.id === selectedId);
+  });
+}
+
+function deleteCard(id) {
+  if (!getCard(id)) return;
+  applyChange(() => {
+    board.cards = board.cards.filter(c => c.id !== id);
+  });
+  if (selectedId === id) selectedId = null;
+  refreshStacking();
+  updateChrome();
+}
+
+/* ---------------------------------------------------------------------------
+   Card creation
+--------------------------------------------------------------------------- */
+
+function makeCard(type, x, y, extra) {
+  const size = DEFAULT_SIZE[type];
+  const card = {
+    id: uid("c"),
+    type,
+    x: 0, y: 0,
+    w: size.w,
+    h: size.h
+  };
+
+  if (type === "text")   Object.assign(card, { text: "" });
+  if (type === "list")   Object.assign(card, { items: [{ id: uid("i"), text: "", checked: false }], checkable: false });
+  if (type === "image")  Object.assign(card, { dataUrl: "", alt: "" });
+  if (type === "swatch") Object.assign(card, { colour: "#c9a227", label: "" });
+
+  Object.assign(card, extra || {});
+
+  card.x = Math.round(clamp(x, 0, CANVAS_SIZE - card.w));
+  card.y = Math.round(clamp(y, 0, CANVAS_SIZE - card.h));
+  return card;
+}
+
+function addCard(type, x, y, extra) {
+  const card = makeCard(type, x, y, extra);
+  applyChange(() => { board.cards.push(card); });
+  select(card.id);
+  updateChrome();
+
+  const el = elements.get(card.id);
+  if (el) {
+    if (type === "text")   el.querySelector(".text-field")?.focus();
+    if (type === "list")   el.querySelector(".row-input")?.focus();
+    if (type === "swatch") el.querySelector(".swatch-label")?.focus();
+  }
+  return card.id;
+}
+
+/* Where a toolbar-created card goes: the middle of what you are looking at. */
+function viewportCentre(type) {
+  const size = DEFAULT_SIZE[type];
+  return {
+    x: scroller.scrollLeft + scroller.clientWidth  / 2 - size.w / 2,
+    y: scroller.scrollTop  + scroller.clientHeight / 2 - size.h / 2
+  };
+}
+
+/* ---------------------------------------------------------------------------
+   Rendering
+   Full rebuild of the card layer. Cheap at this scale, and only ever runs on
+   discrete changes — never mid-keystroke, never mid-gesture.
+--------------------------------------------------------------------------- */
+
+const scroller   = document.getElementById("scroller");
+const canvas     = document.getElementById("canvas");
+const titleInput = document.getElementById("title");
+const undoBtn    = document.getElementById("undoBtn");
+const redoBtn    = document.getElementById("redoBtn");
+const emptyState = document.getElementById("empty");
+const toastEl    = document.getElementById("toast");
+const jsonInput  = document.getElementById("jsonInput");
+const imageInput = document.getElementById("imageInput");
+
+const elements = new Map();   // card id -> element
+
+function render() {
+  elements.forEach(el => el.remove());
+  elements.clear();
+
+  board.cards.forEach((card, i) => {
+    const el = buildCard(card);
+    el.style.zIndex = String(i + 1);
+    elements.set(card.id, el);
+    canvas.appendChild(el);
+  });
+
+  refreshStacking();
+  board.cards.forEach(card => grow(card, elements.get(card.id)));
+  updateChrome();
+}
+
+function updateChrome() {
+  undoBtn.disabled = undoStack.length === 0;
+  redoBtn.disabled = redoStack.length === 0;
+  emptyState.classList.toggle("show", board.cards.length === 0);
+  if (document.activeElement !== titleInput) titleInput.value = board.title;
+}
+
+/* Cards only ever grow to fit their content, never shrink — a height you set
+   by dragging is respected. Writes h straight to state with no history entry,
+   same rule as typing. */
+function grow(card, el) {
+  if (!el || !el.__scrollHost) return;
+  const host = el.__scrollHost;
+  const overflow = host.scrollHeight - host.clientHeight;
+  if (overflow > 0) {
+    card.h = Math.min(CANVAS_SIZE - card.y, card.h + overflow);
+    el.style.height = card.h + "px";
+  }
+}
+
+function buildCard(card) {
+  const el = document.createElement("div");
+  el.className = "card card-" + card.type;
+  el.dataset.id = card.id;
+  el.style.left   = card.x + "px";
+  el.style.top    = card.y + "px";
+  el.style.width  = card.w + "px";
+  el.style.height = card.h + "px";
+
+  el.appendChild(buildGrip(card, el));
+
+  const body = document.createElement("div");
+  body.className = "body";
+  el.appendChild(body);
+  el.__body = body;
+
+  if (card.type === "text")   buildText(card, el, body);
+  if (card.type === "list")   buildList(card, el, body);
+  if (card.type === "image")  buildImage(card, el, body);
+  if (card.type === "swatch") buildSwatch(card, el, body);
+
+  const handle = document.createElement("div");
+  handle.className = "resize";
+  handle.setAttribute("aria-hidden", "true");
+  handle.addEventListener("pointerdown", e => startResize(e, card, el, handle));
+  el.appendChild(handle);
+
+  /* Selecting must not preventDefault — inputs inside still need the click. */
+  el.addEventListener("pointerdown", () => select(card.id));
+
+  return el;
+}
+
+function buildGrip(card, el) {
+  const grip = document.createElement("div");
+  grip.className = "grip";
+
+  const rail = document.createElement("div");
+  rail.className = "grip-rail";
+  grip.appendChild(rail);
+
+  if (card.type === "list") {
+    const toggle = document.createElement("button");
+    toggle.className = "grip-btn";
+    toggle.type = "button";
+    toggle.textContent = card.checkable ? "☑" : "•";
+    toggle.title = card.checkable ? "Switch to bullets" : "Switch to checkboxes";
+    toggle.setAttribute("aria-label", toggle.title);
+    toggle.setAttribute("aria-pressed", String(card.checkable));
+    toggle.addEventListener("pointerdown", e => e.stopPropagation());
+    toggle.addEventListener("click", () => {
+      applyChange(() => { getCard(card.id).checkable = !card.checkable; });
+    });
+    grip.appendChild(toggle);
+  }
+
+  /* A delete affordance matters on touch, where there is no Delete key. */
+  const del = document.createElement("button");
+  del.className = "grip-btn danger";
+  del.type = "button";
+  del.textContent = "×";
+  del.title = "Delete card";
+  del.setAttribute("aria-label", "Delete card");
+  del.addEventListener("pointerdown", e => e.stopPropagation());
+  del.addEventListener("click", () => deleteCard(card.id));
+  grip.appendChild(del);
+
+  grip.addEventListener("pointerdown", e => startDrag(e, card, el, grip));
+  return grip;
+}
+
+/* --- text ----------------------------------------------------------------- */
+
+function buildText(card, el, body) {
+  const ta = document.createElement("textarea");
+  ta.className = "text-field";
+  ta.value = card.text;
+  ta.placeholder = "Note…";
+  ta.spellcheck = false;
+  ta.setAttribute("aria-label", "Card text");
+
+  ta.addEventListener("focus", stashEdit);
+  ta.addEventListener("input", () => {
+    stashEdit();                          // before the write, so the snapshot is pre-change
+    getCard(card.id).text = ta.value;
+    grow(card, el);                       // auto-grow, no re-render, focus intact
+  });
+  ta.addEventListener("blur", commitEdit);
+
+  body.appendChild(ta);
+  el.__scrollHost = ta;
+}
+
+/* --- list ----------------------------------------------------------------- */
+
+function buildList(card, el, body) {
+  const rows = document.createElement("div");
+  rows.className = "rows";
+  card.items.forEach(item => rows.appendChild(buildRow(card, el, item)));
+  body.appendChild(rows);
+  el.__scrollHost = rows;
+}
+
+function buildRow(card, el, item) {
+  const row = document.createElement("div");
+  row.className = "row" + (card.checkable && item.checked ? " checked" : "");
+  row.dataset.item = item.id;
+
+  if (card.checkable) {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = !!item.checked;
+    box.setAttribute("aria-label", "Done");
+    box.addEventListener("pointerdown", e => e.stopPropagation());
+    box.addEventListener("change", () => {
+      applyChange(() => {
+        const target = getCard(card.id).items.find(i => i.id === item.id);
+        if (target) target.checked = box.checked;
+      });
+    });
+    row.appendChild(box);
+  } else {
+    const dot = document.createElement("span");
+    dot.className = "bullet";
+    dot.textContent = "•";
+    dot.setAttribute("aria-hidden", "true");
+    row.appendChild(dot);
+  }
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "row-input";
+  input.value = item.text;
+  input.placeholder = "Item";
+  input.spellcheck = false;
+  input.setAttribute("aria-label", "List item");
+
+  input.addEventListener("focus", stashEdit);
+  input.addEventListener("input", () => {
+    stashEdit();
+    const target = getCard(card.id).items.find(i => i.id === item.id);
+    if (target) target.text = input.value;
+  });
+  input.addEventListener("blur", commitEdit);
+  input.addEventListener("keydown", e => onRowKey(e, card, item, input));
+
+  row.appendChild(input);
+  return row;
+}
+
+function onRowKey(e, card, item, input) {
+  const items = getCard(card.id).items;
+  const idx = items.findIndex(i => i.id === item.id);
+  if (idx < 0) return;
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const newId = uid("i");
+    applyChange(() => {
+      getCard(card.id).items.splice(idx + 1, 0, { id: newId, text: "", checked: false });
+    });
+    focusItem(card.id, newId, "end");
+    return;
+  }
+
+  if (e.key === "Backspace" && input.value === "" && idx > 0) {
+    e.preventDefault();
+    const prevId = items[idx - 1].id;
+    applyChange(() => {
+      getCard(card.id).items.splice(idx, 1);
+    });
+    focusItem(card.id, prevId, "end");
+    return;
+  }
+
+  if (e.key === "ArrowUp" && idx > 0) {
+    e.preventDefault();
+    focusItem(card.id, items[idx - 1].id, "end");
+    return;
+  }
+
+  if (e.key === "ArrowDown" && idx < items.length - 1) {
+    e.preventDefault();
+    focusItem(card.id, items[idx + 1].id, "end");
+  }
+}
+
+function focusItem(cardId, itemId, where) {
+  const el = elements.get(cardId);
+  if (!el) return;
+  const input = el.querySelector('[data-item="' + itemId + '"] .row-input');
+  if (!input) return;
+  input.focus();
+  const pos = where === "end" ? input.value.length : 0;
+  input.setSelectionRange(pos, pos);
+}
+
+/* --- image ---------------------------------------------------------------- */
+
+function buildImage(card, el, body) {
+  const wrap = document.createElement("div");
+  wrap.className = "image-wrap";
+
+  if (card.dataUrl) {
+    const img = document.createElement("img");
+    img.src = card.dataUrl;
+    img.alt = card.alt || "";
+    img.draggable = false;
+    wrap.appendChild(img);
+  } else {
+    const note = document.createElement("span");
+    note.className = "image-empty";
+    note.textContent = "No image";
+    wrap.appendChild(note);
+  }
+
+  body.appendChild(wrap);
+}
+
+/* --- swatch --------------------------------------------------------------- */
+
+function buildSwatch(card, el, body) {
+  const block = document.createElement("div");
+  block.className = "swatch-block";
+  block.style.background = card.colour;
+
+  const picker = document.createElement("input");
+  picker.type = "color";
+  picker.className = "swatch-colour";
+  picker.value = card.colour;
+  picker.setAttribute("aria-label", "Swatch colour");
+  picker.addEventListener("pointerdown", e => e.stopPropagation());
+
+  const ring = document.createElement("span");
+  ring.className = "swatch-ring";
+  ring.setAttribute("aria-hidden", "true");
+
+  const foot = document.createElement("div");
+  foot.className = "swatch-foot";
+
+  const hex = document.createElement("span");
+  hex.className = "swatch-hex";
+  hex.textContent = card.colour;
+
+  const label = document.createElement("input");
+  label.type = "text";
+  label.className = "swatch-label";
+  label.value = card.label;
+  label.placeholder = "Label";
+  label.spellcheck = false;
+  label.setAttribute("aria-label", "Swatch label");
+  label.addEventListener("focus", stashEdit);
+  label.addEventListener("input", () => {
+    stashEdit();
+    getCard(card.id).label = label.value;
+  });
+  label.addEventListener("blur", commitEdit);
+
+  /* Native colour pickers stream `input` while you drag and fire `change`
+     when the dialog closes — the same open/commit shape as focus/blur. */
+  picker.addEventListener("input", () => {
+    stashEdit();
+    getCard(card.id).colour = picker.value;
+    block.style.background = picker.value;
+    hex.textContent = picker.value;
+  });
+  picker.addEventListener("change", commitEdit);
+
+  block.appendChild(picker);
+  block.appendChild(ring);
+  foot.appendChild(hex);
+  foot.appendChild(label);
+  body.appendChild(block);
+  body.appendChild(foot);
+}
+
+/* ---------------------------------------------------------------------------
+   Drag
+   Moves the element with transform during the gesture — starting from
+   translate(0,0) means there is no jump on grab — and commits x/y to state
+   exactly once, on pointerup.
+--------------------------------------------------------------------------- */
+
+function startDrag(e, card, el, grip) {
+  if (e.button > 0) return;
+  select(card.id);
+  e.preventDefault();
+  grip.setPointerCapture(e.pointerId);
+
+  const startX = e.clientX, startY = e.clientY;
+  const startScrollL = scroller.scrollLeft, startScrollT = scroller.scrollTop;
+  const originX = card.x, originY = card.y;
+  let nx = originX, ny = originY, moved = false;
+
+  el.classList.add("dragging");
+
+  const onMove = ev => {
+    const dx = (ev.clientX - startX) + (scroller.scrollLeft - startScrollL);
+    const dy = (ev.clientY - startY) + (scroller.scrollTop  - startScrollT);
+    if (!moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) moved = true;
+    nx = clamp(originX + dx, 0, CANVAS_SIZE - card.w);
+    ny = clamp(originY + dy, 0, CANVAS_SIZE - card.h);
+    el.style.transform = "translate(" + (nx - originX) + "px," + (ny - originY) + "px)";
+  };
+
+  const onEnd = () => {
+    grip.removeEventListener("pointermove", onMove);
+    grip.removeEventListener("pointerup", onEnd);
+    grip.removeEventListener("pointercancel", onEnd);
+    el.classList.remove("dragging");
+    el.style.transform = "";
+    if (!moved) return;
+    applyChange(() => {
+      const target = getCard(card.id);
+      if (!target) return;
+      target.x = Math.round(nx);
+      target.y = Math.round(ny);
+    });
+  };
+
+  grip.addEventListener("pointermove", onMove);
+  grip.addEventListener("pointerup", onEnd);
+  grip.addEventListener("pointercancel", onEnd);
+}
+
+/* ---------------------------------------------------------------------------
+   Resize — same shape as drag: visual during, one applyChange on release.
+--------------------------------------------------------------------------- */
+
+function startResize(e, card, el, handle) {
+  if (e.button > 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  handle.setPointerCapture(e.pointerId);
+
+  const startX = e.clientX, startY = e.clientY;
+  const startScrollL = scroller.scrollLeft, startScrollT = scroller.scrollTop;
+  const originW = card.w, originH = card.h;
+  const ratio = originW / originH;
+  const min = MIN_SIZE[card.type];
+  let nw = originW, nh = originH;
+
+  const onMove = ev => {
+    const dx = (ev.clientX - startX) + (scroller.scrollLeft - startScrollL);
+    const dy = (ev.clientY - startY) + (scroller.scrollTop  - startScrollT);
+    let w = clamp(originW + dx, min.w, CANVAS_SIZE - card.x);
+    let h = clamp(originH + dy, min.h, CANVAS_SIZE - card.y);
+
+    if (card.type === "image") {          // images keep their aspect ratio
+      h = w / ratio;
+      if (h < min.h) { h = min.h; w = h * ratio; }
+      if (h > CANVAS_SIZE - card.y) { h = CANVAS_SIZE - card.y; w = h * ratio; }
+    }
+
+    nw = w; nh = h;
+    el.style.width  = w + "px";
+    el.style.height = h + "px";
+  };
+
+  const onEnd = () => {
+    handle.removeEventListener("pointermove", onMove);
+    handle.removeEventListener("pointerup", onEnd);
+    handle.removeEventListener("pointercancel", onEnd);
+    if (Math.round(nw) === originW && Math.round(nh) === originH) return;
+    applyChange(() => {
+      const target = getCard(card.id);
+      if (!target) return;
+      target.w = Math.round(nw);
+      target.h = Math.round(nh);
+    });
+  };
+
+  handle.addEventListener("pointermove", onMove);
+  handle.addEventListener("pointerup", onEnd);
+  handle.addEventListener("pointercancel", onEnd);
+}
+
+/* ---------------------------------------------------------------------------
+   Card-type picker
+--------------------------------------------------------------------------- */
+
+let pickerEl = null;
+let pickerOpenedAt = 0;
+
+function canvasPoint(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function closePicker() {
+  if (pickerEl) { pickerEl.remove(); pickerEl = null; }
+}
+
+function openPicker(pt) {
+  closePicker();
+  pickerOpenedAt = Date.now();
+
+  const menu = document.createElement("div");
+  menu.className = "picker";
+  menu.setAttribute("role", "menu");
+
+  [["text", "Text"], ["list", "List"], ["image", "Image"], ["swatch", "Swatch"]]
+    .forEach(([type, label]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "menuitem");
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      b.appendChild(dot);
+      b.appendChild(document.createTextNode(label));
+      b.addEventListener("click", () => {
+        closePicker();
+        if (type === "image") {
+          pendingImagePoint = pt;
+          imageInput.click();
+        } else {
+          addCard(type, pt.x, pt.y);
+        }
+      });
+      menu.appendChild(b);
+    });
+
+  menu.style.left = pt.x + "px";
+  menu.style.top  = pt.y + "px";
+  canvas.appendChild(menu);
+  pickerEl = menu;
+
+  /* Keep it on screen near the right/bottom edges. */
+  const r = menu.getBoundingClientRect();
+  if (r.right > window.innerWidth - 8)  menu.style.left = (pt.x - r.width)  + "px";
+  if (r.bottom > window.innerHeight - 8) menu.style.top  = (pt.y - r.height) + "px";
+
+  menu.querySelector("button").focus();
+}
+
+canvas.addEventListener("dblclick", e => {
+  if (e.target !== canvas) return;
+  if (Date.now() - pickerOpenedAt < 500) return;   // touch may fire dblclick too
+  openPicker(canvasPoint(e));
+});
+
+/* Manual double-tap for touch, where dblclick is unreliable. */
+let lastTap = { t: 0, x: 0, y: 0 };
+canvas.addEventListener("pointerup", e => {
+  if (e.pointerType === "mouse" || e.target !== canvas) return;
+  const now = Date.now();
+  if (now - lastTap.t < 350 &&
+      Math.abs(e.clientX - lastTap.x) < 28 &&
+      Math.abs(e.clientY - lastTap.y) < 28) {
+    lastTap.t = 0;
+    if (now - pickerOpenedAt > 500) openPicker(canvasPoint(e));
+    return;
+  }
+  lastTap = { t: now, x: e.clientX, y: e.clientY };
+});
+
+/* ---------------------------------------------------------------------------
+   Canvas-level input
+--------------------------------------------------------------------------- */
+
+canvas.addEventListener("pointerdown", e => {
+  if (e.target !== canvas) return;
+  closePicker();
+  if (selectedId !== null) { select(null); }
+});
+
+document.addEventListener("keydown", e => {
+  const mod = e.metaKey || e.ctrlKey;
+  const key = e.key.toLowerCase();
+
+  if (e.key === "Escape") {
+    if (pickerEl) { closePicker(); return; }
+    if (isEditable(document.activeElement)) document.activeElement.blur();
+    return;
+  }
+
+  if (mod && key === "z") {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if (mod && key === "y") {              // Windows-style redo
+    e.preventDefault();
+    redo();
+    return;
+  }
+
+  /* Delete only when focus is outside a text field, or notes get eaten
+     while you are editing them. */
+  if ((e.key === "Delete" || e.key === "Backspace") &&
+      !isEditable(document.activeElement) && selectedId) {
+    e.preventDefault();
+    deleteCard(selectedId);
+  }
+});
+
+function isEditable(node) {
+  if (!node) return false;
+  const tag = node.tagName;
+  return tag === "TEXTAREA" || tag === "INPUT" || node.isContentEditable === true;
+}
+
+/* ---------------------------------------------------------------------------
+   Images
+
+   PROTOTYPE SHORTCUT — images are stored inline as data URLs on the card, so
+   the whole board is one JSON blob. The real app must store binary blobs
+   separately (IndexedDB / object store) and keep only a reference on the
+   card; data URLs bloat every history snapshot and every export. Do not
+   carry this across.
+--------------------------------------------------------------------------- */
+
+const IMAGE_MAX_EDGE = 320;
+let pendingImagePoint = null;
+
+function addImageFile(file, pt) {
+  if (!file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onerror = () => toast("Could not read that file.");
+  reader.onload = () => {
+    const dataUrl = String(reader.result);
+    const img = new Image();
+    img.onerror = () => toast("That file is not a readable image.");
+    img.onload = () => {
+      const scale = Math.min(1, IMAGE_MAX_EDGE / img.naturalWidth, IMAGE_MAX_EDGE / img.naturalHeight);
+      const w = Math.max(MIN_SIZE.image.w, Math.round(img.naturalWidth  * scale));
+      const h = Math.max(MIN_SIZE.image.h, Math.round(img.naturalHeight * scale));
+      addCard("image", pt.x, pt.y, { dataUrl, alt: file.name || "", w, h });
+    };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function addImageFiles(files, pt) {
+  Array.from(files)
+    .filter(f => f.type.startsWith("image/"))
+    .forEach((f, i) => addImageFile(f, { x: pt.x + i * 24, y: pt.y + i * 24 }));
+}
+
+["dragenter", "dragover"].forEach(type => {
+  scroller.addEventListener(type, e => {
+    if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    canvas.classList.add("drop-active");
+  });
+});
+
+scroller.addEventListener("dragleave", e => {
+  if (e.relatedTarget && scroller.contains(e.relatedTarget)) return;
+  canvas.classList.remove("drop-active");
+});
+
+scroller.addEventListener("drop", e => {
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  canvas.classList.remove("drop-active");
+  addImageFiles(e.dataTransfer.files, canvasPoint(e));
+});
+
+document.addEventListener("paste", e => {
+  if (!e.clipboardData) return;
+  const files = Array.from(e.clipboardData.files || []).filter(f => f.type.startsWith("image/"));
+  if (!files.length) return;
+  e.preventDefault();
+  addImageFiles(files, viewportCentre("image"));
+});
+
+imageInput.addEventListener("change", () => {
+  const pt = pendingImagePoint || viewportCentre("image");
+  pendingImagePoint = null;
+  if (imageInput.files.length) addImageFiles(imageInput.files, pt);
+  imageInput.value = "";
+});
+
+/* ---------------------------------------------------------------------------
+   Export / Import — the only persistence in the prototype
+--------------------------------------------------------------------------- */
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  commitEdit();
+  const slug = (board.title || "board").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "board";
+  const blob = new Blob([JSON.stringify(board, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = slug + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast("Exported " + slug + ".json");
+});
+
+document.getElementById("importBtn").addEventListener("click", () => jsonInput.click());
+
+jsonInput.addEventListener("change", () => {
+  const file = jsonInput.files[0];
+  jsonInput.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onerror = () => toast("Could not read that file.");
+  reader.onload = () => {
+    let incoming;
+    try {
+      incoming = normaliseBoard(JSON.parse(String(reader.result)));
+    } catch (err) {
+      toast("Not a valid board file.");
+      return;
+    }
+    applyChange(() => { board = incoming; });
+    selectedId = null;
+    titleInput.value = board.title;
+    scrollToContent();
+    render();
+    toast("Imported " + board.cards.length + " card" + (board.cards.length === 1 ? "" : "s"));
+  };
+  reader.readAsText(file);
+});
+
+const num = (v, fallback) => (typeof v === "number" && isFinite(v) ? v : fallback);
+const str = (v, fallback) => (typeof v === "string" ? v : fallback);
+
+function normaliseBoard(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.cards)) {
+    throw new Error("Not a board");
+  }
+  const cards = raw.cards.map(c => {
+    const type = ["text", "list", "image", "swatch"].includes(c && c.type) ? c.type : "text";
+    const min = MIN_SIZE[type];
+    const card = {
+      id: str(c.id, "") || uid("c"),
+      type,
+      x: clamp(num(c.x, 40), 0, CANVAS_SIZE),
+      y: clamp(num(c.y, 40), 0, CANVAS_SIZE),
+      w: Math.max(min.w, num(c.w, DEFAULT_SIZE[type].w)),
+      h: Math.max(min.h, num(c.h, DEFAULT_SIZE[type].h))
+    };
+
+    if (type === "text") {
+      card.text = str(c.text, "");
+    }
+    if (type === "list") {
+      card.checkable = !!c.checkable;
+      const items = Array.isArray(c.items) ? c.items : [];
+      card.items = items.length
+        ? items.map(i => ({ id: str(i && i.id, "") || uid("i"), text: str(i && i.text, ""), checked: !!(i && i.checked) }))
+        : [{ id: uid("i"), text: "", checked: false }];
+    }
+    if (type === "image") {
+      /* Only inline data URLs. A remote http(s) src in an imported file would
+         make the page fetch from the network, which this prototype must not do. */
+      const url = str(c.dataUrl, "");
+      card.dataUrl = /^data:image\//i.test(url) ? url : "";
+      card.alt = str(c.alt, "");
+    }
+    if (type === "swatch") {
+      const colour = str(c.colour, "");
+      card.colour = /^#[0-9a-f]{6}$/i.test(colour) ? colour : "#c9a227";
+      card.label = str(c.label, "");
+    }
+    return card;
+  });
+
+  return { id: str(raw.id, "b_proto"), title: str(raw.title, "Untitled board"), cards };
+}
+
+/* ---------------------------------------------------------------------------
+   Board title — same focus/type/blur history rule as card text
+--------------------------------------------------------------------------- */
+
+titleInput.addEventListener("focus", stashEdit);
+titleInput.addEventListener("input", () => {
+  stashEdit();
+  board.title = titleInput.value;
+});
+titleInput.addEventListener("blur", commitEdit);
+titleInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); titleInput.blur(); }
+});
+
+/* ---------------------------------------------------------------------------
+   Toolbar
+--------------------------------------------------------------------------- */
+
+document.querySelectorAll("[data-add]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const type = btn.dataset.add;
+    const pt = viewportCentre(type);
+    if (type === "image") { pendingImagePoint = pt; imageInput.click(); return; }
+    addCard(type, pt.x, pt.y);
+  });
+});
+
+undoBtn.addEventListener("click", undo);
+redoBtn.addEventListener("click", redo);
+
+/* ---------------------------------------------------------------------------
+   Toast
+--------------------------------------------------------------------------- */
+
+let toastTimer = null;
+function toast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
+}
+
+/* ---------------------------------------------------------------------------
+   Boot
+--------------------------------------------------------------------------- */
+
+function scrollToContent() {
+  if (!board.cards.length) {
+    scroller.scrollLeft = 80;
+    scroller.scrollTop  = 80;
+    return;
+  }
+  const minX = Math.min(...board.cards.map(c => c.x));
+  const minY = Math.min(...board.cards.map(c => c.y));
+  scroller.scrollLeft = Math.max(0, minX - 56);
+  scroller.scrollTop  = Math.max(0, minY - 56);
+}
+
+/* Demo content, so the prototype is usable the moment it opens. Replace with
+   `board.cards = []` for a cold start. */
+function seed() {
+  board.cards = [
+    {
+      id: uid("c"), type: "text", x: 180, y: 150, w: 288, h: 168,
+      text: "Double-click empty canvas for the card picker.\n\nDrag a card by the bar along its top edge. Select it to reveal the resize handle, bottom-right."
+    },
+    {
+      id: uid("c"), type: "list", x: 500, y: 150, w: 268, h: 168, checkable: false,
+      items: [
+        { id: uid("i"), text: "Enter opens a new row", checked: false },
+        { id: uid("i"), text: "Backspace empties, then removes", checked: false },
+        { id: uid("i"), text: "The • above toggles checkboxes", checked: false }
+      ]
+    },
+    { id: uid("c"), type: "swatch", x: 180, y: 350, w: 150, h: 150, colour: "#c9a227", label: "Ochre" },
+    { id: uid("c"), type: "swatch", x: 350, y: 350, w: 150, h: 150, colour: "#4c5f53", label: "Moss" },
+    { id: uid("c"), type: "swatch", x: 520, y: 350, w: 150, h: 150, colour: "#8c5a44", label: "Rust" }
+  ];
+}
+
+seed();
+render();
+scrollToContent();
+</script>
+</body>
+</html>
