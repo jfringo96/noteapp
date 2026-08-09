@@ -81,7 +81,23 @@ body{ display:flex; flex-direction:column; }
   z-index:100;
 }
 
-.bar-left{ display:flex; align-items:center; gap:9px; min-width:0; flex:1 1 auto; }
+.bar-left{ display:flex; align-items:center; gap:6px; min-width:0; flex:1 1 auto; }
+
+.back{
+  flex:none;
+  font:inherit;
+  font-size:15px;
+  line-height:1;
+  color:var(--ink-dim);
+  background:transparent;
+  border:0;
+  border-radius:6px;
+  padding:6px 8px;
+  cursor:pointer;
+  margin-left:3px;
+}
+.back:hover:not(:disabled){ background:var(--bar-2); color:var(--ink); }
+.back:disabled{ color:#3d444c; cursor:default; }
 
 .mark{
   width:13px; height:13px; flex:none;
@@ -166,6 +182,18 @@ body{ display:flex; flex-direction:column; }
 .canvas.drop-active{
   box-shadow:inset 0 0 0 2px var(--accent-soft);
 }
+/* Programmatic focus target after navigating — a ring round 3000px is no use. */
+.canvas:focus{ outline:none; }
+
+.sr-only{
+  position:absolute;
+  width:1px; height:1px;
+  padding:0; margin:-1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
 
 /* ---------------------------------------------------------------------------
    Cards
@@ -191,6 +219,12 @@ body{ display:flex; flex-direction:column; }
   box-shadow:0 0 0 2px var(--accent), 0 2px 4px rgba(0,0,0,.3), 0 22px 40px -10px rgba(0,0,0,.7);
   transition:none;
 }
+/* Board card armed to receive a card dragged over it. */
+.card.drop-into{
+  box-shadow:0 0 0 3px var(--accent), 0 0 0 9px var(--accent-soft), var(--shadow);
+}
+.card.drop-into .board-open{ background:#ddd2b8; }
+.card.dragging.will-move{ opacity:.7; }
 
 /* Drag handle. Dragging from the body would fight text selection in textareas. */
 .grip{
@@ -445,8 +479,11 @@ body{ display:flex; flex-direction:column; }
   min-width:0;
   cursor:text;
 }
-.board-title:hover{ background:rgba(0,0,0,.05); }
 .board-title:focus{ background:var(--paper); box-shadow:inset 0 0 0 2px var(--accent-soft); }
+/* Unselected, the whole body opens the board — the title must not look or
+   behave like a field. Select the card first (grip bar) to rename. */
+.card-board.selected .board-title:hover{ background:rgba(0,0,0,.05); }
+.card-board:not(.selected) .board-title{ cursor:pointer; }
 .board-count{
   font-size:var(--fs-xs);
   color:var(--paper-ink-dim);
@@ -539,11 +576,35 @@ body{ display:flex; flex-direction:column; }
   border-radius:9px;
   box-shadow:0 14px 34px -8px rgba(0,0,0,.75);
 }
+.switcher-item{
+  display:flex;
+  align-items:center;
+  gap:2px;
+}
+.switcher-item:hover{ background:#333a42; border-radius:5px; }
+
+.switcher-del{
+  flex:none;
+  font:inherit;
+  font-size:14px;
+  line-height:1;
+  color:var(--ink-faint);
+  background:transparent;
+  border:0;
+  border-radius:5px;
+  padding:7px 8px;
+  cursor:pointer;
+}
+.switcher-del:hover{ background:rgba(185,97,79,.22); color:var(--danger); }
+.switcher-del:disabled{ opacity:.3; cursor:default; }
+.switcher-del:disabled:hover{ background:transparent; color:var(--ink-faint); }
+
 .switcher-row{
   display:flex;
   align-items:baseline;
   gap:8px;
-  width:100%;
+  flex:1 1 auto;
+  min-width:0;
   font:inherit;
   font-size:var(--fs-sm);
   text-align:left;
@@ -556,6 +617,7 @@ body{ display:flex; flex-direction:column; }
 }
 .switcher-row:hover{ background:#333a42; }
 .switcher-row[aria-current="true"]{ background:var(--accent-soft); }
+.switcher-new{ width:100%; }
 .switcher-name{
   flex:1 1 auto;
   min-width:0;
@@ -708,6 +770,8 @@ body{ display:flex; flex-direction:column; }
 <header class="bar">
   <div class="bar-left">
     <span class="mark" aria-hidden="true"></span>
+    <button class="back" id="backBtn" aria-label="Back" title="Back to the previous board"
+            disabled>&#8592;</button>
     <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
     <input id="title" class="title" type="text" value="Home" aria-label="Board title" spellcheck="false">
   </div>
@@ -736,7 +800,7 @@ body{ display:flex; flex-direction:column; }
 </header>
 
 <div class="scroller" id="scroller">
-  <div class="canvas" id="canvas"></div>
+  <div class="canvas" id="canvas" tabindex="-1" aria-label="Board canvas"></div>
   <div class="empty" id="empty"><span>Double-click the canvas to add a card</span></div>
 </div>
 
@@ -747,6 +811,7 @@ body{ display:flex; flex-direction:column; }
 </p>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sr-only" id="announce" role="status" aria-live="polite"></div>
 
 <input type="file" id="jsonInput" accept="application/json,.json" hidden>
 <input type="file" id="imageInput" accept="image/*" multiple hidden>
@@ -858,51 +923,42 @@ function commitEdit() {
   updateChrome();
 }
 
+/* Both jumps land on the board the change concerned, so nothing is ever
+   applied off-screen.
+
+   applyChange() never navigates, so the board a change concerned is exactly
+   the currentBoardId inside the snapshot it recorded. Undo gets that for
+   free by popping. Redo does not — its entry is built at undo time from live
+   state, which names wherever you were standing then — so we stamp it with
+   the board from the entry being undone. One field copy, no diffing. */
 function undo() {
   commitEdit();
   if (!undoStack.length) return;
-  const leaving = structuredClone(state);
-  redoStack.push(leaving);
+  const target = undoStack[undoStack.length - 1];
+  const inverse = structuredClone(state);
+  inverse.currentBoardId = target.currentBoardId;
+  redoStack.push(inverse);
   state = undoStack.pop();
-  afterHistoryJump(leaving);
+  afterHistoryJump();
 }
 
 function redo() {
   commitEdit();
   if (!redoStack.length) return;
-  const leaving = structuredClone(state);
-  undoStack.push(leaving);
+  const target = redoStack[redoStack.length - 1];
+  const inverse = structuredClone(state);
+  inverse.currentBoardId = target.currentBoardId;
+  undoStack.push(inverse);
   state = redoStack.pop();
-  afterHistoryJump(leaving);
+  afterHistoryJump();
 }
 
-function afterHistoryJump(leaving) {
-  /* Land on the board the jump actually altered, so the change is never
-     applied off-screen.
-
-     A snapshot carries whichever board was on screen when it was recorded,
-     and that is not always the board that differs. Undoing gets it right for
-     free — that snapshot was taken by applyChange() at the moment of the
-     edit. Redoing does not: its snapshot was taken when you pressed undo, so
-     it names wherever you happened to be standing then. Diffing the two
-     states covers both directions without tracking extra metadata. */
-  const changed = changedBoardIds(leaving, state).filter(id => state.boards[id]);
-  if (changed.length && !changed.includes(state.currentBoardId)) {
-    state.currentBoardId = changed[0];
-  }
+function afterHistoryJump() {
+  /* The snapshot can name a board that this jump removed. */
   if (!currentBoard()) state.currentBoardId = Object.keys(state.boards)[0];
   if (selectedId && !getCard(selectedId)) selectedId = null;
   titleInput.value = currentBoard().title;
   render();
-}
-
-function changedBoardIds(a, b) {
-  const ids = new Set(Object.keys(a.boards).concat(Object.keys(b.boards)));
-  const out = [];
-  ids.forEach(id => {
-    if (JSON.stringify(a.boards[id]) !== JSON.stringify(b.boards[id])) out.push(id);
-  });
-  return out;
 }
 
 const getCard = id => currentBoard().cards.find(c => c.id === id) || null;
@@ -934,8 +990,12 @@ function refreshStacking() {
   currentBoard().cards.forEach((card, i) => {
     const el = elements.get(card.id);
     if (!el) return;
+    const isSelected = card.id === selectedId;
     el.style.zIndex = String(i + 1);
-    el.classList.toggle("selected", card.id === selectedId);
+    el.classList.toggle("selected", isSelected);
+    /* Board names are only editable on a selected card — see buildBoardLink. */
+    const boardTitle = el.querySelector(".board-title");
+    if (boardTitle) boardTitle.readOnly = !isSelected;
   });
 }
 
@@ -992,6 +1052,59 @@ function addCard(type, x, y, extra) {
   return card.id;
 }
 
+/* Fresh ids all the way down, so a copy shares nothing with its original.
+   A board card is duplicated as a LINK — the target board is not copied,
+   which is the whole point of nesting by reference. */
+function cloneCard(card) {
+  const copy = structuredClone(card);
+  copy.id = uid("c");
+  if (Array.isArray(copy.items)) {
+    copy.items = copy.items.map(item => Object.assign({}, item, { id: uid("i") }));
+  }
+  return copy;
+}
+
+function duplicateSelected() {
+  const src = getCard(selectedId);
+  if (!src) return;
+  const copy = cloneCard(src);
+  copy.x = clamp(src.x + 24, 0, CANVAS_SIZE - copy.w);
+  copy.y = clamp(src.y + 24, 0, CANVAS_SIZE - copy.h);
+  applyChange(() => { currentBoard().cards.push(copy); });
+  select(copy.id);
+  updateChrome();
+}
+
+/* Card clipboard — separate from the system clipboard, which only carries
+   images here. Cut/paste is the keyboard route for moving a card to another
+   board; dragging onto a board card is the direct one. */
+let cardClipboard = null;
+
+function cutSelected(remove) {
+  const src = getCard(selectedId);
+  if (!src) return false;
+  cardClipboard = structuredClone(src);
+  if (remove) {
+    deleteCard(src.id);
+    toast("Cut — paste it on any board");
+  } else {
+    toast("Copied");
+  }
+  return true;
+}
+
+function pasteCard() {
+  if (!cardClipboard) return false;
+  const copy = cloneCard(cardClipboard);
+  const pt = viewportCentre(copy.type);
+  copy.x = clamp(Math.round(pt.x), 0, CANVAS_SIZE - copy.w);
+  copy.y = clamp(Math.round(pt.y), 0, CANVAS_SIZE - copy.h);
+  applyChange(() => { currentBoard().cards.push(copy); });
+  select(copy.id);
+  updateChrome();
+  return true;
+}
+
 /* Where a toolbar-created card goes: the middle of what you are looking at. */
 function viewportCentre(type) {
   const size = DEFAULT_SIZE[type];
@@ -1012,6 +1125,8 @@ const canvas     = document.getElementById("canvas");
 const titleInput = document.getElementById("title");
 const crumbs     = document.getElementById("crumbs");
 const boardsBtn  = document.getElementById("boardsBtn");
+const backBtn    = document.getElementById("backBtn");
+const announceEl = document.getElementById("announce");
 const undoBtn    = document.getElementById("undoBtn");
 const redoBtn    = document.getElementById("redoBtn");
 const emptyState = document.getElementById("empty");
@@ -1021,7 +1136,20 @@ const imageInput = document.getElementById("imageInput");
 
 const elements = new Map();   // card id -> element
 
+/* Where you were looking on each board. Deliberately NOT in `state`: it is
+   view position, not document content, so it stays out of history, out of
+   exports, and out of every snapshot clone. */
+const scrollMemory = new Map();   // board id -> {x, y}
+let displayedBoardId = null;      // the board render() last drew
+
 function render() {
+  /* Any board switch comes through here, so this is the one place that has
+     to bank the outgoing scroll position. */
+  const switching = displayedBoardId !== state.currentBoardId;
+  if (switching && displayedBoardId) {
+    scrollMemory.set(displayedBoardId, { x: scroller.scrollLeft, y: scroller.scrollTop });
+  }
+
   elements.forEach(el => el.remove());
   elements.clear();
 
@@ -1035,11 +1163,19 @@ function render() {
   refreshStacking();
   currentBoard().cards.forEach(card => grow(card, elements.get(card.id)));
   updateChrome();
+
+  if (switching) {
+    displayedBoardId = state.currentBoardId;
+    const seen = scrollMemory.get(displayedBoardId);
+    if (seen) { scroller.scrollLeft = seen.x; scroller.scrollTop = seen.y; }
+    else scrollToContent();
+  }
 }
 
 function updateChrome() {
   undoBtn.disabled = undoStack.length === 0;
   redoBtn.disabled = redoStack.length === 0;
+  backBtn.disabled = !backStack.some(id => !!state.boards[id]);
   emptyState.classList.toggle("show", currentBoard().cards.length === 0);
   if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
   renderBreadcrumbs();
@@ -1389,9 +1525,16 @@ function buildBoardLink(card, el, body) {
   title.spellcheck = false;
   title.setAttribute("aria-label", "Board name");
 
-  /* Editing the name must not open the board. pointerdown still bubbles, so
-     clicking the title selects the card like any other click. */
-  title.addEventListener("click", e => e.stopPropagation());
+  /* Two jobs, one surface. Unselected, the whole card body opens the board —
+     including over the title, which is what the hand expects. Once the card
+     is selected, the title becomes the rename field and swallows the click.
+     Armed at pointerdown because the card's own pointerdown handler selects
+     it before the click event lands. */
+  let armed = false;
+  title.addEventListener("pointerdown", () => { armed = selectedId === card.id; });
+  title.addEventListener("click", e => {
+    if (armed) e.stopPropagation();          // rename, do not navigate
+  });
   title.addEventListener("focus", stashEdit);
   title.addEventListener("input", () => {
     stashEdit();
@@ -1458,16 +1601,43 @@ function refreshBoardLabels(except) {
    this mutates two boards at once — the current one gains a card, and a new
    board appears — which is the case afterHistoryJump() has to resolve. */
 function addBoardCard(x, y) {
-  const name = prompt("Name for the new board", "New board");
-  if (name === null) return;                       // cancelled
   const id = uid("b");
   const card = makeCard("board", x, y, { targetBoardId: id });
   applyChange(() => {
-    state.boards[id] = { id: id, title: name.trim() || "New board", cards: [] };
+    state.boards[id] = { id: id, title: "New board", cards: [] };
     currentBoard().cards.push(card);
   });
+  /* No modal: the card's own inline title field is the rename affordance, so
+     open it pre-selected and let the first keystroke replace the placeholder. */
   select(card.id);
   updateChrome();
+  const input = elements.get(card.id) && elements.get(card.id).querySelector(".board-title");
+  if (input) { input.focus(); input.select(); }
+}
+
+/* Moves a card out of the current board and into another. One splice, one
+   push, one history entry — the flat board map means nothing has to be
+   re-parented. Position is carried across as-is. */
+function moveCardToBoard(cardId, boardId) {
+  const source = currentBoard();
+  const card = source.cards.find(c => c.id === cardId);
+  const destination = state.boards[boardId];
+  if (!card || !destination || destination === source) return;
+
+  applyChange(() => {
+    const from = currentBoard();
+    const i = from.cards.findIndex(c => c.id === cardId);
+    if (i < 0) return;
+    const [moved] = from.cards.splice(i, 1);
+    moved.x = clamp(moved.x, 0, CANVAS_SIZE - moved.w);
+    moved.y = clamp(moved.y, 0, CANVAS_SIZE - moved.h);
+    state.boards[boardId].cards.push(moved);
+  });
+
+  if (selectedId === cardId) selectedId = null;   // it lives elsewhere now
+  refreshStacking();
+  updateChrome();
+  toast("Moved to “" + (destination.title || "Untitled") + "”");
 }
 
 /* ---------------------------------------------------------------------------
@@ -1478,7 +1648,16 @@ function addBoardCard(x, y) {
 
 let trail = ["b_home"];
 
-function navigateTo(boardId, mode) {
+/* Where you came from, so Back works even after a switcher jump reset the
+   trail. A route record, like the trail — not a tree position. */
+const backStack = [];
+const BACK_MAX = 50;
+
+/* opts.trail: "push" (default) | "reset" | "keep" (caller set it) |
+                "repair" (leave it to normaliseTrail)
+   opts.noBack: do not record where we came from (used by Back itself) */
+function navigateTo(boardId, opts) {
+  opts = opts || {};
   if (!state.boards[boardId]) return;
   /* Seal any open edit first. Otherwise its snapshot, taken on the board we
      are leaving, would later differ from the live state only by
@@ -1490,9 +1669,15 @@ function navigateTo(boardId, mode) {
     return;
   }
 
+  if (!opts.noBack) {
+    backStack.push(state.currentBoardId);
+    if (backStack.length > BACK_MAX) backStack.shift();
+  }
+
   state.currentBoardId = boardId;
-  if (mode === "reset") trail = [boardId];
-  else if (mode !== "keep") {       // "keep" = the caller already set the trail
+  if (opts.trail === "reset") trail = [boardId];
+  else if (opts.trail === "keep" || opts.trail === "repair") { /* left alone */ }
+  else {
     trail.push(boardId);
     if (trail.length > TRAIL_MAX) trail.shift();
   }
@@ -1500,8 +1685,30 @@ function navigateTo(boardId, mode) {
   selectedId = null;
   closePicker();
   closeSwitcher();
-  render();
-  scrollToContent();
+  render();                          // restores this board's scroll position
+  focusCanvas();
+  announce("Now on " + currentBoard().title);
+}
+
+function goBack() {
+  while (backStack.length) {
+    const id = backStack.pop();
+    if (state.boards[id]) {          // skip boards deleted since
+      navigateTo(id, { trail: "repair", noBack: true });
+      return;
+    }
+  }
+  updateChrome();
+}
+
+/* Keyboard focus has to land somewhere after a navigation, or Tab restarts
+   from the top of the document. */
+function focusCanvas() {
+  canvas.focus({ preventScroll: true });
+}
+
+function announce(message) {
+  announceEl.textContent = message;
 }
 
 /* Repair the trail against reality: after an import, or an undo that jumped
@@ -1532,7 +1739,7 @@ function renderBreadcrumbs() {
     crumb.title = "Back to " + (b.title || "Untitled");
     crumb.addEventListener("click", () => {
       trail.length = i + 1;                       // clicking a crumb truncates
-      navigateTo(id, "keep");
+      navigateTo(id, { trail: "keep" });
     });
     crumbs.appendChild(crumb);
 
@@ -1564,8 +1771,14 @@ function openSwitcher() {
   menu.className = "switcher";
   menu.setAttribute("role", "menu");
 
+  const only = Object.keys(state.boards).length < 2;
+
   Object.keys(state.boards).forEach(id => {
     const b = state.boards[id];
+
+    const item = document.createElement("div");
+    item.className = "switcher-item";
+
     const row = document.createElement("button");
     row.type = "button";
     row.className = "switcher-row";
@@ -1585,8 +1798,20 @@ function openSwitcher() {
     row.appendChild(count);
     /* Jumping is not walking, so the trail restarts here. This is also the
        only route back to a board whose link card has been deleted. */
-    row.addEventListener("click", () => navigateTo(id, "reset"));
-    menu.appendChild(row);
+    row.addEventListener("click", () => navigateTo(id, { trail: "reset" }));
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "switcher-del";
+    del.textContent = "×";
+    del.disabled = only;
+    del.title = only ? "The only board cannot be deleted" : "Delete “" + name.textContent + "”";
+    del.setAttribute("aria-label", del.title);
+    del.addEventListener("click", e => { e.stopPropagation(); deleteBoard(id); });
+
+    item.appendChild(row);
+    item.appendChild(del);
+    menu.appendChild(item);
   });
 
   const sep = document.createElement("div");
@@ -1615,13 +1840,41 @@ function openSwitcher() {
 
 /* Standalone: no card anywhere points at it. Reachable only from here. */
 function newStandaloneBoard() {
-  const name = prompt("Name for the new board", "New board");
-  if (name === null) return;
   const id = uid("b");
   applyChange(() => {
-    state.boards[id] = { id: id, title: name.trim() || "New board", cards: [] };
+    state.boards[id] = { id: id, title: "New board", cards: [] };
   });
-  navigateTo(id, "reset");
+  navigateTo(id, { trail: "reset" });
+  /* The top bar title is this board's rename affordance — same trick as the
+     board card, no modal. */
+  titleInput.focus();
+  titleInput.select();
+}
+
+/* Deleting a board never deletes anything that points at it: cards holding
+   its id simply become broken links, which already render as such. */
+function deleteBoard(id) {
+  const board = state.boards[id];
+  if (!board) return;
+  if (Object.keys(state.boards).length < 2) {
+    toast("That is the only board left.");
+    return;
+  }
+  const name = board.title || "Untitled";
+  const wasCurrent = id === state.currentBoardId;
+
+  applyChange(() => {
+    delete state.boards[id];
+    if (wasCurrent) state.currentBoardId = Object.keys(state.boards)[0];
+  });
+
+  if (wasCurrent) {
+    trail = [state.currentBoardId];
+    displayedBoardId = null;         // force a scroll restore for the new board
+    render();
+  }
+  closeSwitcher();
+  toast("Deleted “" + name + "” — undo to bring it back");
 }
 
 /* ---------------------------------------------------------------------------
@@ -1642,6 +1895,18 @@ function startDrag(e, card, el, grip) {
   const originX = card.x, originY = card.y;
   let nx = originX, ny = originY, moved = false;
 
+  /* Drop targets for moving this card to another board: every board card on
+     this board except the one being dragged, and except any that points back
+     at the board we are already on. Measured once — nothing else moves. */
+  const scrollerRect = scroller.getBoundingClientRect();
+  const dropTargets = currentBoard().cards.filter(c =>
+    c.type === "board" &&
+    c.id !== card.id &&
+    c.targetBoardId !== state.currentBoardId &&
+    !!state.boards[c.targetBoardId]
+  );
+  let dropOn = null;
+
   el.classList.add("dragging");
 
   const onMove = ev => {
@@ -1651,15 +1916,35 @@ function startDrag(e, card, el, grip) {
     nx = clamp(originX + dx, 0, CANVAS_SIZE - card.w);
     ny = clamp(originY + dy, 0, CANVAS_SIZE - card.h);
     el.style.transform = "translate(" + (nx - originX) + "px," + (ny - originY) + "px)";
+
+    /* Hit-test the pointer, not the card, so the aim matches the finger.
+       Front to back, so the topmost board card wins. */
+    const px = scroller.scrollLeft + (ev.clientX - scrollerRect.left);
+    const py = scroller.scrollTop  + (ev.clientY - scrollerRect.top);
+    let hit = null;
+    for (let i = dropTargets.length - 1; i >= 0; i--) {
+      const t = dropTargets[i];
+      if (px >= t.x && px <= t.x + t.w && py >= t.y && py <= t.y + t.h) { hit = t; break; }
+    }
+    if (hit !== dropOn) {
+      if (dropOn) elements.get(dropOn.id)?.classList.remove("drop-into");
+      dropOn = hit;
+      if (dropOn) elements.get(dropOn.id)?.classList.add("drop-into");
+      el.classList.toggle("will-move", !!dropOn);
+    }
   };
 
   const onEnd = () => {
     grip.removeEventListener("pointermove", onMove);
     grip.removeEventListener("pointerup", onEnd);
     grip.removeEventListener("pointercancel", onEnd);
-    el.classList.remove("dragging");
+    el.classList.remove("dragging", "will-move");
     el.style.transform = "";
-    if (!moved) return;
+    if (dropOn) elements.get(dropOn.id)?.classList.remove("drop-into");
+    if (!moved) { dropOn = null; return; }
+
+    if (dropOn) { moveCardToBoard(card.id, dropOn.targetBoardId); dropOn = null; return; }
+
     applyChange(() => {
       const target = getCard(card.id);
       if (!target) return;
@@ -1839,6 +2124,17 @@ document.addEventListener("keydown", e => {
     return;
   }
 
+  /* Card clipboard and duplicate. All guarded on focus being outside a text
+     field, so they never shadow the browser's own text editing. */
+  if (!isEditable(document.activeElement)) {
+    if (mod && key === "d" && selectedId) { e.preventDefault(); duplicateSelected(); return; }
+    if (mod && key === "x" && selectedId) { e.preventDefault(); cutSelected(true);   return; }
+    if (mod && key === "c" && selectedId) { e.preventDefault(); cutSelected(false);  return; }
+    /* preventDefault stops the paste event firing too, so the image handler
+       and this cannot both act on one keystroke. */
+    if (mod && key === "v" && cardClipboard) { e.preventDefault(); pasteCard(); return; }
+  }
+
   /* Delete only when focus is outside a text field, or notes get eaten
      while you are editing them. */
   if ((e.key === "Delete" || e.key === "Backspace") &&
@@ -1973,6 +2269,9 @@ jsonInput.addEventListener("change", () => {
     applyChange(() => { state = incoming; });
     selectedId = null;
     trail = [state.currentBoardId];
+    backStack.length = 0;
+    scrollMemory.clear();          // positions from the previous document
+    displayedBoardId = null;
     titleInput.value = currentBoard().title;
     render();
     scrollToContent();
@@ -2096,6 +2395,8 @@ document.querySelectorAll("[data-add]").forEach(btn => {
 undoBtn.addEventListener("click", undo);
 redoBtn.addEventListener("click", redo);
 
+backBtn.addEventListener("click", goBack);
+
 boardsBtn.addEventListener("click", () => {
   if (switcherEl) closeSwitcher(); else openSwitcher();
 });
@@ -2141,7 +2442,7 @@ function seed() {
   state.boards.b_home.cards = [
     {
       id: uid("c"), type: "text", x: 180, y: 150, w: 288, h: 168,
-      text: "Double-click empty canvas for the card picker.\n\nDrag a card by the bar along its top edge. Select it to reveal the resize handle, bottom-right."
+      text: "Double-click empty canvas for the card picker.\n\nDrag a card by the bar along its top edge. Drop it onto a board card to move it to that board.\n\nCmd/Ctrl+D duplicates, X cuts, V pastes — cut here, open a board, paste there."
     },
     {
       id: uid("c"), type: "list", x: 500, y: 150, w: 268, h: 168, checkable: false,
