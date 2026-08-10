@@ -25,16 +25,29 @@ export function initPersistence(statusCallback) {
   });
 }
 
+/**
+ * Returns "loaded", "empty" or "corrupt".
+ *
+ * The caller needs to know which: sweeping unreferenced images against a
+ * document we failed to read would delete every image on disk, because an
+ * empty document references none of them.
+ */
 export async function loadFromDisk() {
   const doc = await window.api.readDoc();
 
   if (doc && doc.error === "corrupt") {
     loadDoc(emptyDoc());
-    onStatus("boards.json could not be read. It was kept as " + doc.movedTo);
-    return;
+    onStatus("boards.json could not be read. The old file was kept as " + doc.movedTo);
+    return "corrupt";
   }
 
-  loadDoc(doc && doc.boards ? doc : emptyDoc());
+  if (doc && doc.boards) {
+    loadDoc(doc);
+    return "loaded";
+  }
+
+  loadDoc(emptyDoc());
+  return "empty";
 }
 
 export function scheduleSave() {

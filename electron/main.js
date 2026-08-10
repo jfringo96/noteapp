@@ -33,6 +33,20 @@ function createWindow() {
 
   win.once("ready-to-show", () => win.show());
 
+  // Renderer errors otherwise only exist inside DevTools. In development it is
+  // worth having them in the same terminal as everything else.
+  if (isDev) {
+    win.webContents.on("console-message", (...args) => {
+      const details = typeof args[0] === "object" && args[0] !== null && "message" in args[0]
+        ? args[0]
+        : { level: args[1], message: args[2], lineNumber: args[3], sourceId: args[4] };
+
+      if (details.level === "error" || details.level === 3) {
+        console.error(`[renderer] ${details.message}  (${details.sourceId}:${details.lineNumber})`);
+      }
+    });
+  }
+
   if (isDev) {
     win.loadURL(DEV_URL);
   } else {
@@ -47,6 +61,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("doc:read", () => storage.readDoc());
   ipcMain.handle("doc:write", (_event, doc) => storage.writeDoc(doc));
+  ipcMain.handle("image:write", (_event, name, bytes) => storage.writeImage(name, bytes));
+  ipcMain.handle("image:read", (_event, name) => storage.readImage(name));
+  ipcMain.handle("image:sweep", (_event, keep) => storage.sweepImages(keep));
   ipcMain.handle("dataDir:path", () => storage.dataDir());
   ipcMain.handle("dataDir:reveal", () => shell.openPath(storage.dataDir()));
 

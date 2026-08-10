@@ -118,6 +118,11 @@ it.
 **Nothing is installed in this mode.** The app runs from this folder. That means
 it disappears if the folder moves, which is fine while we're building.
 
+**One gotcha worth knowing.** Changes under `src/` appear instantly. Changes to
+`electron/` — the window itself, or anything it exposes to the page — only take
+effect when the app is closed and reopened. If a new feature does nothing at
+all and the console mentions something being undefined, that's usually why.
+
 **Making a real installed copy** — `npm run pack` builds an installer into
 `release/`. Worth doing once the app is genuinely useful, and again whenever
 there's a version worth keeping. The installed copy and the dev copy read the

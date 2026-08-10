@@ -13,6 +13,9 @@
 
     <div class="topbar-actions">
       <button id="addText" title="Add a text card">Text</button>
+      <button id="addList" title="Add a list card">List</button>
+      <button id="addImage" title="Add an image card">Image</button>
+      <button id="addSwatch" title="Add a colour swatch">Swatch</button>
       <span class="divider" aria-hidden="true"></span>
       <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">Undo</button>
       <button id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">Redo</button>
@@ -25,8 +28,10 @@
     <div id="canvas" class="canvas"></div>
   </main>
 
-  <p id="empty" class="empty-state">Double-click anywhere to add a card</p>
-  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div id="picker" class="picker" role="menu" aria-label="Add a card" hidden></div>
+
+  <p id="empty" class="empty-state">Double-click anywhere to add a card, or drop in an image</p>
+  <div id="status" class="status" role="status" aria-live="polite" hidden></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

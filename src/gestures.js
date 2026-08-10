@@ -120,6 +120,14 @@ export function attachResize(handle, el, cardId, scroller) {
     w = Math.round(clamp(card.w + dx, min.w, CANVAS_SIZE - card.x));
     h = Math.round(clamp(card.h + dy, min.h, CANVAS_SIZE - card.y));
 
+    // Images keep their proportions: width leads, height follows. Letting them
+    // stretch would misrepresent the photograph, which is the whole point of
+    // having it on the board.
+    if (card.type === "image" && card.naturalW && card.naturalH) {
+      h = Math.round(clamp((w * card.naturalH) / card.naturalW, min.h, CANVAS_SIZE - card.y));
+      w = Math.round(clamp((h * card.naturalW) / card.naturalH, min.w, CANVAS_SIZE - card.x));
+    }
+
     el.style.width = w + "px";
     el.style.height = h + "px";
   });

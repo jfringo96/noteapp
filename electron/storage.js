@@ -52,3 +52,66 @@ export async function writeDoc(doc) {
   await fs.rename(tmp, target);
   return { savedAt: Date.now() };
 }
+
+/* ---------------------------------------------------------------- images --- */
+
+const imagesDir = () => path.join(DATA_DIR, "images");
+
+/**
+ * Names come from the renderer, so they are checked rather than trusted. This
+ * is the only thing standing between a bug and writing outside the data folder.
+ */
+const SAFE_NAME = /^[A-Za-z0-9_-]{1,64}\.[A-Za-z0-9]{2,5}$/;
+
+function imagePath(name) {
+  if (!SAFE_NAME.test(name)) throw new Error("Unsafe image name: " + name);
+  return path.join(imagesDir(), name);
+}
+
+export async function writeImage(name, bytes) {
+  const target = imagePath(name);
+  const tmp = target + ".tmp";
+  await fs.writeFile(tmp, Buffer.from(bytes));
+  await fs.rename(tmp, target);
+  return name;
+}
+
+export async function readImage(name) {
+  try {
+    const buffer = await fs.readFile(imagePath(name));
+    // Hand back a plain ArrayBuffer; Buffer does not survive the IPC boundary
+    // in a form the renderer can make a Blob from.
+    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  } catch (err) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+export async function listImages() {
+  try {
+    return await fs.readdir(imagesDir());
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Deletes image files nothing refers to any more.
+ *
+ * Only safe to call at startup, with the history stacks empty. During a session
+ * two cards can share an image and undo can hold states referencing an image
+ * whose card is currently deleted, so "unreferenced" is not a stable idea.
+ */
+export async function sweepImages(keepNames) {
+  const keep = new Set(keepNames);
+  const removed = [];
+
+  for (const name of await listImages()) {
+    if (keep.has(name)) continue;
+    await fs.unlink(path.join(imagesDir(), name)).catch(() => {});
+    removed.push(name);
+  }
+
+  return removed;
+}

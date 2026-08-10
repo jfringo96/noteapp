@@ -150,10 +150,45 @@ html, body {
   user-select: none;
 }
 
+.scroller.is-drop-target { outline: 2px dashed var(--accent); outline-offset: -6px; }
+
+/* ------------------------------------------------------------------ picker */
+
+.picker {
+  position: fixed;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  min-width: 8rem;
+  padding: .25rem;
+  background: #232830;
+  border: 1px solid #39404b;
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+}
+
+.picker[hidden] { display: none; }
+
+.picker button {
+  padding: .4rem .6rem;
+  font: inherit;
+  font-size: .875rem;
+  text-align: left;
+  color: var(--paper);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.picker button:hover { background: #2f3641; }
+
+/* ------------------------------------------------------------------- cards */
+
 .card-grip {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   flex: 0 0 18px;
   border-radius: var(--radius) var(--radius) 0 0;
   background: rgb(0 0 0 / 0.06);
@@ -228,6 +263,139 @@ html, body {
   height: 7px;
   border-right: 2px solid rgb(0 0 0 / 0.35);
   border-bottom: 2px solid rgb(0 0 0 / 0.35);
+}
+
+/* --------------------------------------------------------------- grip rail */
+
+.card-grip-rail { display: flex; align-items: center; gap: 2px; padding-left: 3px; }
+
+.card-grip-btn {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  opacity: .45;
+  cursor: pointer;
+}
+
+.card-grip-btn:hover { opacity: 1; background: rgb(0 0 0 / 0.08); }
+
+/* -------------------------------------------------------------- list cards */
+
+.list-rows {
+  flex: 1;
+  overflow-y: auto;
+  padding: .35rem .5rem .5rem;
+}
+
+.list-row { display: flex; align-items: center; gap: .4rem; }
+
+.list-bullet {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin: 0 2px;
+  background: #9a9082;
+  border-radius: 50%;
+}
+
+.list-check { flex: 0 0 auto; margin: 0; accent-color: #7a6a4a; }
+
+/* One marker or the other, never both — swapping is a class, not a rebuild. */
+.list-row.is-checkable .list-bullet { display: none; }
+.list-row:not(.is-checkable) .list-check { display: none; }
+
+.list-input {
+  flex: 1;
+  min-width: 0;
+  padding: .15rem 0;
+  font: inherit;
+  font-size: .9375rem;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-overflow: ellipsis;
+}
+
+.list-input:focus { outline: none; }
+.list-row.is-checked .list-input { color: #9a9082; text-decoration: line-through; }
+
+/* ------------------------------------------------------------- image cards */
+
+.image-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: #e7e1d6;
+}
+
+.image-el { width: 100%; height: 100%; object-fit: contain; }
+
+.image-missing {
+  position: absolute;
+  font-size: .8125rem;
+  color: #9a9082;
+}
+
+/* ------------------------------------------------------------ swatch cards */
+
+.swatch-block {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The native picker fills the block so clicking the colour opens it. */
+.swatch-picker {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.swatch-foot {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  flex: 0 0 auto;
+  padding: .35rem .5rem .45rem;
+}
+
+.swatch-label {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: .875rem;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-overflow: ellipsis;
+}
+
+.swatch-label:focus { outline: none; }
+.swatch-label::placeholder { color: #b4ab9c; }
+
+.swatch-hex {
+  flex: 0 0 auto;
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .03em;
+  color: #9a9082;
 }
 
 @media (prefers-reduced-motion: reduce) {

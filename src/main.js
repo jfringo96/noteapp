@@ -5,7 +5,6 @@
 
 import {
   addCard,
-  applyChange,
   canRedo,
   canUndo,
   commitEdit,
@@ -20,8 +19,18 @@ import {
   undo,
 } from "./store.js";
 
-import { focusCard, initCanvas, refreshStacking, render, viewportCentre } from "./canvas.js";
+import {
+  addImageFiles,
+  focusCard,
+  hidePicker,
+  initCanvas,
+  refreshStacking,
+  render,
+  viewportCentre,
+} from "./canvas.js";
+
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
+import { imageFilesFrom, sweepImages } from "./images.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,9 +50,13 @@ function updateChrome() {
   emptyEl.hidden = currentBoard().cards.length > 0;
 }
 
+let statusTimer = null;
+
 function setStatus(message) {
+  clearTimeout(statusTimer);
   statusEl.textContent = message;
   statusEl.hidden = !message;
+  if (message) statusTimer = setTimeout(() => setStatus(""), 6000);
 }
 
 /* ------------------------------------------------------------------ boot --- */
@@ -58,19 +71,45 @@ setHooks({
   dirty: scheduleSave,
 });
 
-initCanvas($("scroller"), $("canvas"));
+initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
 
-await loadFromDisk();
+const loadResult = await loadFromDisk();
 render();
 updateChrome();
 
-/* -------------------------------------------------------------- toolbar --- */
+// Only ever at startup, and only when the document actually loaded.
+//
+// At startup because two cards can share an image and undo can hold a state
+// referencing an image whose card is deleted right now — so mid-session there
+// is no safe moment to call something unreferenced.
+//
+// Only when loaded because an empty document references no images at all, so
+// sweeping against a failed read would delete every image on disk.
+if (loadResult === "loaded") sweepImages(state).catch(() => {});
 
-$("addText").addEventListener("click", () => {
-  const point = viewportCentre("text");
-  addCard("text", point.x, point.y);
+/* --------------------------------------------------------------- toolbar --- */
+
+function addFromToolbar(type) {
+  const point = viewportCentre(type);
+  addCard(type, point.x, point.y);
   focusCard(getSelectedId());
+}
+
+$("addText").addEventListener("click", () => addFromToolbar("text"));
+$("addList").addEventListener("click", () => addFromToolbar("list"));
+$("addSwatch").addEventListener("click", () => addFromToolbar("swatch"));
+
+$("addImage").addEventListener("click", () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+  input.addEventListener("change", () => {
+    const point = viewportCentre("image");
+    addImageFiles(imageFilesFrom(input.files), point.x, point.y);
+  });
+  input.click();
 });
 
 undoBtn.addEventListener("click", () => undo());
@@ -111,8 +150,23 @@ window.addEventListener("keydown", (event) => {
     const id = getSelectedId();
     if (!id) return;
     event.preventDefault();
+    hidePicker();
     deleteCard(id);
   }
+});
+
+/* ---------------------------------------------------------------- paste --- */
+
+window.addEventListener("paste", (event) => {
+  // Never steal a paste aimed at a text field.
+  if (isEditable(document.activeElement)) return;
+
+  const files = imageFilesFrom(event.clipboardData && event.clipboardData.files);
+  if (!files.length) return;
+
+  event.preventDefault();
+  const point = viewportCentre("image");
+  addImageFiles(files, point.x, point.y);
 });
 
 /* ------------------------------------------------------------------ exit --- */
