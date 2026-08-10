@@ -12,13 +12,18 @@ export const IMAGE_QUALITY = 0.8;
 /** How large a newly imported image card is on the canvas, longest edge. */
 export const IMAGE_CARD_EDGE = 300;
 
-export const CARD_TYPES = ["text", "list", "image"];
+export const CARD_TYPES = ["text", "list", "image", "board"];
 
 export const TYPE_LABEL = {
   text: "Text",
   list: "List",
   image: "Image",
+  board: "Board",
 };
+
+/** Breadcrumbs are capped so a cycle of boards can't grow them forever. */
+export const TRAIL_MAX = 10;
+export const BACK_MAX = 50;
 
 /** Cards whose top bar can be tinted, for colour-coding a board. */
 export const ACCENTABLE = ["text", "list"];
@@ -30,12 +35,14 @@ export const MIN_SIZE = {
   text: { w: 140, h: 80 },
   list: { w: 160, h: 62 },
   image: { w: 90, h: 70 },
+  board: { w: 150, h: 74 },
 };
 
 export const DEFAULT_SIZE = {
   text: { w: 260, h: 160 },
   list: { w: 240, h: 150 },
   image: { w: 280, h: 200 },
+  board: { w: 210, h: 92 },
 };
 
 export const uid = (prefix) => prefix + "_" + Math.random().toString(36).slice(2, 9);

@@ -108,6 +108,27 @@ Image cards lost their frame at the same time: no paper, no letterbox fill, and
 the grip floats over the top edge on hover instead of taking a strip out of the
 card. An image card is now the photograph and nothing else.
 
+### Creating a board doesn't navigate into it
+
+`SPEC.md` originally said creating a board navigates to it, inherited from the
+prototype. Changed: it now creates the board and card, leaves you where you
+are, and selects the name for typing.
+
+Teleporting away from the board you were working on to an empty one is
+disorienting, and you usually want to name the thing you just made. This is
+also what Milanote does.
+
+### Selection-dependent behaviour must live in CSS, not `update()`
+
+Selection deliberately never re-renders — it only toggles `is-selected` and the
+z-index (see the note in `store.js`). So anything that depends on whether a card
+is selected has to be expressed as a CSS rule keyed off that class.
+
+The board card's rename gesture is the case that exposed this. Making the name
+editable inside `update()` looked right and could never work, because the click
+that selects the card is the same click that needs the name to already be live.
+`pointer-events` keyed off `.is-selected` does work.
+
 ### Image sizing
 
 1280px max edge, WebP q0.8 — chosen deliberately small. This is for inspiration

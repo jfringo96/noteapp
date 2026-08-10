@@ -207,6 +207,11 @@ export function makeCard(type, x, y, extra) {
     Object.assign(card, { imageId: null, mime: "image/webp", naturalW: 0, naturalH: 0, alt: "" });
   }
 
+  // A board card holds ONLY the target id. Title and card count are read from
+  // the target board on every render, so renaming a board updates every card
+  // pointing at it for free, and nothing can drift out of sync.
+  if (type === "board") card.targetBoardId = null;
+
   // Applied last, so an imported image can bring its own size and dimensions.
   if (extra) Object.assign(card, extra);
 
@@ -233,6 +238,29 @@ export function deleteCard(id) {
 }
 
 export const minSize = (type) => MIN_SIZE[type] || { w: 80, h: 60 };
+
+/* ------------------------------------------------------------ navigating --- */
+
+/**
+ * Navigating is NOT an undoable action, so it never goes through
+ * applyChange() — it writes `currentBoardId` directly.
+ *
+ * But it must seal any in-flight typing first. Otherwise a pending edit
+ * snapshot, taken on the board you are leaving, later differs from live state
+ * by `currentBoardId` alone — and merely walking between boards lands in the
+ * undo stack.
+ */
+export function setCurrentBoard(id) {
+  if (!state.boards[id] || state.currentBoardId === id) return false;
+
+  commitEdit();
+  state.currentBoardId = id;
+  selectedId = null;
+
+  hooks.render();
+  hooks.dirty();
+  return true;
+}
 
 /* -------------------------------------------------------------- document --- */
 

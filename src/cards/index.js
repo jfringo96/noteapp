@@ -10,14 +10,15 @@
  */
 
 import { ACCENTABLE, ACCENT_DEFAULT, isDarkColour } from "../constants.js";
-import { commitEdit, deleteCard, getCard, stashEdit, touch } from "../store.js";
+import { commitEdit, deleteCard, getCard, select, stashEdit, touch } from "../store.js";
 import { attachDrag, attachResize } from "../gestures.js";
 
 import * as text from "./text.js";
 import * as list from "./list.js";
 import * as image from "./image.js";
+import * as board from "./board.js";
 
-const TYPES = { text, list, image };
+const TYPES = { text, list, image, board };
 
 export function buildCard(card, scroller) {
   const el = document.createElement("div");
@@ -68,6 +69,11 @@ export function buildCard(card, scroller) {
   resize.title = "Drag to resize";
 
   el.append(grip, body, resize);
+
+  // Clicking anywhere on a card selects it. Safe because selection only
+  // changes z-index and a class — it never rebuilds the DOM, which would
+  // destroy the element the click is landing on.
+  el.addEventListener("pointerdown", () => select(card.id));
 
   attachDrag(grip, el, card.id, scroller);
   attachResize(resize, el, card.id, scroller);

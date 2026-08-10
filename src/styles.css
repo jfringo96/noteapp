@@ -61,7 +61,108 @@ html, body {
 .board-title:hover { border-color: var(--chrome-line); }
 .board-title:focus { border-color: var(--accent); outline: none; }
 
-.topbar-actions { display: flex; align-items: center; gap: .35rem; }
+.icon-btn {
+  flex: 0 0 auto;
+  padding: .3rem .6rem;
+  font: inherit;
+  font-size: .875rem;
+  color: var(--ink);
+  background: #fbf7ef;
+  border: 1px solid var(--chrome-line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) { background: #fff; border-color: #c3b498; }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+
+/* --------------------------------------------------------------- crumbs */
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.crumb {
+  padding: .2rem .35rem;
+  font: inherit;
+  font-size: .8125rem;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.crumb:hover:not(:disabled) { color: var(--ink); background: #e6ddca; }
+.crumb:disabled { color: var(--ink); cursor: default; }
+.crumb-sep { font-size: .8125rem; color: #b7ab93; }
+
+/* ------------------------------------------------------------- switcher */
+
+.switcher {
+  position: fixed;
+  z-index: 600;
+  min-width: 15rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: .25rem;
+  background: #fffdf9;
+  border: 1px solid var(--chrome-line);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgb(60 45 20 / 0.22);
+}
+
+.switcher[hidden] { display: none; }
+
+.switcher-row { display: flex; align-items: center; border-radius: 4px; }
+.switcher-row:hover { background: #f0e8d8; }
+.switcher-row.is-current { background: #ece2cd; }
+
+.switcher-open {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex: 1;
+  min-width: 0;
+  padding: .4rem .55rem;
+  font: inherit;
+  font-size: .875rem;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.switcher-count { margin-left: auto; font-size: .75rem; color: var(--muted); white-space: nowrap; }
+
+.switcher-delete {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-right: .25rem;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switcher-row:hover .switcher-delete { opacity: 1; }
+.switcher-delete:hover { color: #8c2f2f; background: #f2dede; }
+
+.topbar-actions { display: flex; align-items: center; gap: .35rem; margin-left: auto; }
 
 .topbar-actions button {
   padding: .3rem .7rem;
@@ -385,6 +486,56 @@ html, body {
   background: var(--paper);
   border-radius: 4px;
 }
+
+/* ------------------------------------------------------------- board cards */
+
+.card-board { background: #fbf4e6; }
+
+.card-board.is-drop-target {
+  box-shadow: var(--shadow), 0 0 0 3px var(--accent);
+  transform: scale(1.02);
+}
+
+.board-face {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .15rem;
+  padding: .45rem .65rem .6rem;
+  cursor: pointer;
+}
+
+.board-name {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  font-size: .9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-overflow: ellipsis;
+}
+
+.board-name:focus { outline: none; }
+
+/* Until the card is selected the name ignores the pointer, so a click passes
+   through to the face and opens the board. Once selected it becomes a normal
+   text field and swallows the click, which is the rename gesture. */
+.card-board:not(.is-selected) .board-name { pointer-events: none; cursor: pointer; }
+
+.card-board.is-selected .board-name {
+  border-bottom: 1px solid var(--chrome-line);
+  cursor: text;
+}
+
+.board-meta { font-size: .75rem; color: var(--muted); }
+
+.card-board.is-broken { background: #f7ecec; }
+.card-board.is-broken .board-name { color: #9a6a6a; }
+.card-board.is-broken .board-meta { color: #b08a8a; }
 
 /* ------------------------------------------------------------ resize handle */
 

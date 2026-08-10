@@ -9,12 +9,18 @@
 <body>
 
   <header class="topbar">
+    <button id="backBtn" class="icon-btn" title="Back" aria-label="Back">←</button>
+    <button id="boardsBtn" class="icon-btn" title="All boards" aria-label="All boards">Boards</button>
+
+    <nav id="crumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
+
     <input id="title" class="board-title" aria-label="Board title" spellcheck="false">
 
     <div class="topbar-actions">
       <button id="addText" title="Add a text card">Text</button>
       <button id="addList" title="Add a list card">List</button>
       <button id="addImage" title="Add an image card">Image</button>
+      <button id="addBoard" title="Add a board">Board</button>
       <span class="divider" aria-hidden="true"></span>
       <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">Undo</button>
       <button id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">Redo</button>
@@ -28,6 +34,7 @@
   </main>
 
   <div id="picker" class="picker" role="menu" aria-label="Add a card" hidden></div>
+  <div id="switcher" class="switcher" role="menu" aria-label="All boards" hidden></div>
 
   <p id="empty" class="empty-state">Double-click anywhere to add a card, or drop in an image</p>
   <div id="status" class="status" role="status" aria-live="polite" hidden></div>

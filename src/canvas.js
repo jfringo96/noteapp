@@ -9,16 +9,21 @@
  */
 
 import { CANVAS_SIZE, CARD_TYPES, DEFAULT_SIZE, TYPE_LABEL, clamp } from "./constants.js";
-import { addCard, currentBoard, getSelectedId, select } from "./store.js";
+import { addCard, currentBoard, getSelectedId, select, state } from "./store.js";
+import { addBoardCard } from "./boards.js";
 import { buildCard, updateCard } from "./cards/index.js";
 import { imageFilesFrom, importImage } from "./images.js";
 
 const elements = new Map();
 
+/** boardId -> {x, y}. Runtime only — you would not want undo restoring scroll. */
+const scrollMemory = new Map();
+
 let scroller = null;
 let canvas = null;
 let picker = null;
 let onImportError = () => {};
+let displayedBoardId = null;
 
 export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
   scroller = scrollerEl;
@@ -58,6 +63,21 @@ export function render() {
   const board = currentBoard();
   const selectedId = getSelectedId();
   const seen = new Set();
+
+  // Switching board is the one time a wholesale rebuild is right: none of the
+  // existing elements belong to the board being drawn.
+  if (displayedBoardId !== board.id) {
+    if (displayedBoardId) {
+      scrollMemory.set(displayedBoardId, { x: scroller.scrollLeft, y: scroller.scrollTop });
+    }
+
+    for (const el of elements.values()) el.remove();
+    elements.clear();
+    displayedBoardId = board.id;
+
+    const remembered = scrollMemory.get(board.id) || { x: 0, y: 0 };
+    scroller.scrollTo(remembered.x, remembered.y);
+  }
 
   board.cards.forEach((card, index) => {
     let el = elements.get(card.id);
@@ -109,6 +129,11 @@ function buildPicker() {
 
       if (type === "image") {
         chooseImageFiles(x, y);
+        return;
+      }
+
+      if (type === "board") {
+        createBoardCard(x, y);
         return;
       }
 
@@ -196,6 +221,65 @@ export async function addImageFiles(files, x, y) {
       onImportError(`Could not import ${file.name}: ${err.message}`);
     }
   }
+}
+
+/* ---------------------------------------------------------------- boards --- */
+
+/**
+ * Creates the board and its card, then focuses the name for typing — it does
+ * NOT navigate into the new board.
+ *
+ * This departs from SPEC.md, which said creating a board navigates to it. That
+ * came from the prototype and is disorienting: you make a board, and the board
+ * you were working on vanishes. Milanote leaves you where you are with the name
+ * selected, which is what this does.
+ */
+export function createBoardCard(x, y) {
+  const { cardId } = addBoardCard(x, y);
+  select(cardId);
+
+  const el = elements.get(cardId);
+  if (!el || !el.__boardName) return;
+
+  // select() above added `is-selected`, which is what lets the name take the
+  // pointer and the caret at all.
+  el.__boardName.focus();
+  el.__boardName.select();
+}
+
+/**
+ * The board card under a point, front-to-back so the topmost one wins.
+ *
+ * A board card is never its own drop target, and nor is one pointing back at
+ * the board you are already standing on — moving a card to where it already is
+ * would be a no-op that looked like it worked.
+ */
+export function boardCardUnder(clientX, clientY, excludeCardId) {
+  const cards = currentBoard().cards;
+
+  for (let i = cards.length - 1; i >= 0; i--) {
+    const card = cards[i];
+
+    if (card.type !== "board" || card.id === excludeCardId) continue;
+    if (!card.targetBoardId || card.targetBoardId === state.currentBoardId) continue;
+    if (!state.boards[card.targetBoardId]) continue;
+
+    const el = elements.get(card.id);
+    if (!el) continue;
+
+    const box = el.getBoundingClientRect();
+    if (clientX >= box.left && clientX <= box.right && clientY >= box.top && clientY <= box.bottom) {
+      return el;
+    }
+  }
+
+  return null;
+}
+
+/** The board a drop-target element points at. */
+export function targetBoardOf(el) {
+  const card = currentBoard().cards.find((c) => c.id === el.dataset.id);
+  return card ? card.targetBoardId : null;
 }
 
 /* ----------------------------------------------------------------- utils --- */

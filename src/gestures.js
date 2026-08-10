@@ -15,6 +15,29 @@
 import { applyChange, getCard, minSize, select } from "./store.js";
 import { CANVAS_SIZE, clamp } from "./constants.js";
 
+/**
+ * Registered from main.js rather than imported, because the hit-test lives in
+ * canvas.js and canvas.js already imports the cards that import this file.
+ * Injecting it keeps the import graph a tree.
+ */
+let findDropTarget = () => null;
+let onDrop = () => false;
+
+export function setDropHandlers({ find, drop }) {
+  findDropTarget = find;
+  onDrop = drop;
+}
+
+/** The board card currently lit up as a drop target, if any. */
+let highlighted = null;
+
+function highlight(el) {
+  if (highlighted === el) return;
+  if (highlighted) highlighted.classList.remove("is-drop-target");
+  highlighted = el;
+  if (highlighted) highlighted.classList.add("is-drop-target");
+}
+
 export function attachDrag(grip, el, cardId, scroller) {
   let active = false;
   let dx = 0;
@@ -23,6 +46,8 @@ export function attachDrag(grip, el, cardId, scroller) {
   let startY = 0;
   let startScrollLeft = 0;
   let startScrollTop = 0;
+  let pointerX = 0;
+  let pointerY = 0;
 
   grip.addEventListener("pointerdown", (event) => {
     // Controls living in the grip — delete, the colour picker, the list's
@@ -55,6 +80,12 @@ export function attachDrag(grip, el, cardId, scroller) {
     dx = event.clientX - startX + (scroller.scrollLeft - startScrollLeft);
     dy = event.clientY - startY + (scroller.scrollTop - startScrollTop);
     el.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    // Hit-test the POINTER, not the card. The aim should match the finger,
+    // not wherever the card's corner happens to have drifted.
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    highlight(findDropTarget(pointerX, pointerY, cardId));
   });
 
   const finish = () => {
@@ -63,8 +94,14 @@ export function attachDrag(grip, el, cardId, scroller) {
     el.classList.remove("is-dragging");
     el.style.transform = "";
 
+    const target = findDropTarget(pointerX, pointerY, cardId);
+    highlight(null);
+
     const card = getCard(cardId);
     if (!card || (dx === 0 && dy === 0)) return; // a click, not a drag
+
+    // Dropped onto a board card: move it there instead of repositioning it.
+    if (target && onDrop(cardId, target)) return;
 
     const x = Math.round(clamp(card.x + dx, 0, CANVAS_SIZE - card.w));
     const y = Math.round(clamp(card.y + dy, 0, CANVAS_SIZE - card.h));

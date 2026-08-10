@@ -263,9 +263,14 @@ fill. The grip floats over the top edge rather than taking a strip out of the
 card, and appears on hover or selection.
 
 **board** — a card showing the target board's title and card count. Clicking it
-navigates there. Creating one makes the new empty board immediately and
-navigates to it — no dialog. Renaming is select-then-click on the title, with a
-hover cue so the gesture is discoverable.
+navigates there. Creating one makes the new empty board immediately — no dialog
+— and leaves you where you are with the name selected for typing.
+
+Renaming afterwards is select-then-click on the name, the standard OS
+file-rename gesture: unselected, a click anywhere opens the board; once
+selected, the name becomes a text field and swallows the click.
+
+Drag any card onto a board card to move it into that board.
 
 ---
 

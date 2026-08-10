@@ -1,6 +1,6 @@
 /**
  * Wiring. Everything here connects the state layer to the DOM; the interesting
- * decisions live in store.js.
+ * decisions live in store.js and navigation.js.
  */
 
 import {
@@ -19,16 +19,24 @@ import {
   undo,
 } from "./store.js";
 
+import { moveCardToBoard } from "./boards.js";
+import { hide as hideSwitcher, initSwitcher, refresh as refreshSwitcher } from "./switcher.js";
+import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
+
 import {
   addImageFiles,
+  boardCardUnder,
+  createBoardCard,
   focusCard,
   hidePicker,
   initCanvas,
   refreshStacking,
   render,
+  targetBoardOf,
   viewportCentre,
 } from "./canvas.js";
 
+import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
 import { imageFilesFrom, sweepImages } from "./images.js";
 
@@ -39,15 +47,50 @@ const statusEl = $("status");
 const emptyEl = $("empty");
 const undoBtn = $("undoBtn");
 const redoBtn = $("redoBtn");
+const backBtn = $("backBtn");
+const crumbsEl = $("crumbs");
+const switcherEl = $("switcher");
 
 /* ---------------------------------------------------------------- chrome --- */
 
 function updateChrome() {
+  normaliseTrail();
+
   if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
 
   undoBtn.disabled = !canUndo();
   redoBtn.disabled = !canRedo();
+  backBtn.disabled = !canGoBack();
   emptyEl.hidden = currentBoard().cards.length > 0;
+
+  renderCrumbs();
+  refreshSwitcher();
+}
+
+function renderCrumbs() {
+  const list = crumbs();
+  crumbsEl.replaceChildren();
+
+  // One crumb is just the board you're on, which the title already says.
+  if (list.length < 2) return;
+
+  list.forEach((crumb, index) => {
+    if (index > 0) {
+      const sep = document.createElement("span");
+      sep.className = "crumb-sep";
+      sep.textContent = "/";
+      sep.setAttribute("aria-hidden", "true");
+      crumbsEl.appendChild(sep);
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "crumb";
+    button.textContent = crumb.title || "Untitled";
+    button.disabled = index === list.length - 1;
+    button.addEventListener("click", () => navigateTo(crumb.id, "link"));
+    crumbsEl.appendChild(button);
+  });
 }
 
 let statusTimer = null;
@@ -73,8 +116,20 @@ setHooks({
 
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
+initSwitcher(switcherEl, $("boardsBtn"), setStatus);
+
+setDropHandlers({
+  find: boardCardUnder,
+  drop: (cardId, targetEl) => {
+    const boardId = targetBoardOf(targetEl);
+    if (!boardId || !moveCardToBoard(cardId, boardId)) return false;
+    setStatus(`Moved to ${state.boards[boardId].title} — Ctrl+Z to undo`);
+    return true;
+  },
+});
 
 const loadResult = await loadFromDisk();
+initNavigation();
 render();
 updateChrome();
 
@@ -99,6 +154,11 @@ function addFromToolbar(type) {
 $("addText").addEventListener("click", () => addFromToolbar("text"));
 $("addList").addEventListener("click", () => addFromToolbar("list"));
 
+$("addBoard").addEventListener("click", () => {
+  const point = viewportCentre("board");
+  createBoardCard(point.x, point.y);
+});
+
 $("addImage").addEventListener("click", () => {
   const input = document.createElement("input");
   input.type = "file";
@@ -113,6 +173,7 @@ $("addImage").addEventListener("click", () => {
 
 undoBtn.addEventListener("click", () => undo());
 redoBtn.addEventListener("click", () => redo());
+backBtn.addEventListener("click", () => goBack());
 $("folderBtn").addEventListener("click", () => window.api.revealDataFolder());
 
 /* ----------------------------------------------------------- board title --- */
@@ -141,6 +202,11 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (event.shiftKey) redo();
     else undo();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    hideSwitcher();
     return;
   }
 
