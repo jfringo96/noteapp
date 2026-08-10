@@ -1,0 +1,17 @@
+name = "noteapp-api"
+main = "index.js"
+compatibility_date = "2026-08-01"
+
+# Created with: wrangler kv namespace create BOARDS
+# Paste the id it prints in here.
+[[kv_namespaces]]
+binding = "BOARDS"
+id = "PASTE_KV_NAMESPACE_ID_HERE"
+
+# Created with: wrangler r2 bucket create noteapp-images
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "noteapp-images"
+
+# SHARED_SECRET is not set here — it is a secret, not a variable.
+# Set it with: wrangler secret put SHARED_SECRET
