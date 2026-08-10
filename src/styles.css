@@ -222,6 +222,9 @@ html, body {
   flex: 1;
   min-height: 0;
   display: flex;
+  /* Column, because a swatch stacks its colour block above its label. The
+     single-child types don't care which way this runs. */
+  flex-direction: column;
 }
 
 .card-text-input {
@@ -270,20 +273,20 @@ html, body {
 .card-grip-rail { display: flex; align-items: center; gap: 2px; padding-left: 3px; }
 
 .card-grip-btn {
-  width: 16px;
+  width: 20px;
   height: 16px;
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   color: var(--ink);
-  background: none;
+  background: rgb(0 0 0 / 0.05);
   border: 0;
   border-radius: 3px;
-  opacity: .45;
+  opacity: .7;
   cursor: pointer;
 }
 
-.card-grip-btn:hover { opacity: 1; background: rgb(0 0 0 / 0.08); }
+.card-grip-btn:hover { opacity: 1; background: rgb(0 0 0 / 0.12); }
 
 /* -------------------------------------------------------------- list cards */
 
