@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Board App</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <input id="title" class="board-title" aria-label="Board title" spellcheck="false">
+
+    <div class="topbar-actions">
+      <button id="addText" title="Add a text card">Text</button>
+      <span class="divider" aria-hidden="true"></span>
+      <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">Undo</button>
+      <button id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">Redo</button>
+      <span class="divider" aria-hidden="true"></span>
+      <button id="folderBtn" title="Open the folder your boards are saved in">Folder</button>
+    </div>
+  </header>
+
+  <main id="scroller" class="scroller">
+    <div id="canvas" class="canvas"></div>
+  </main>
+
+  <p id="empty" class="empty-state">Double-click anywhere to add a card</p>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

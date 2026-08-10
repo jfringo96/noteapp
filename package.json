@@ -1,0 +1,44 @@
+{
+  "name": "board-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A personal Milanote-style board app.",
+  "main": "electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k --success command-electron -n vite,electron -c cyan,magenta \"npm:dev:vite\" \"npm:dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "pack": "npm run build && electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.0.24",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.1"
+  },
+  "build": {
+    "appId": "uk.co.stonemanphotography.boardapp",
+    "productName": "Board App",
+    "files": [
+      "electron/**",
+      "dist/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "allowScripts": {
+    "electron@40.10.6": true,
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.28.2": true
+  }
+}
