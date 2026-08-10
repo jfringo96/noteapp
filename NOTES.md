@@ -1,8 +1,67 @@
 # Notes
 
-Decisions made and things deliberately deferred. `SPEC.md` is authoritative;
-this records what we chose where the spec left room, and where we knowingly
-departed from it.
+Decisions made and things deliberately deferred.
+
+`SPEC.md` was written for a browser app synced through Cloudflare. **That model
+was abandoned on 2026-08-10** in favour of a standalone desktop application —
+see "Shape of the app" below. Where this file and `SPEC.md` disagree, this file
+is the current one; `SPEC.md` still governs everything the change did not touch
+(the state model, interactions, card types, undo, the phase ordering).
+
+---
+
+## Shape of the app
+
+**A standalone desktop application. No server, no accounts, no sync.**
+
+The owner's actual use is: ideate at the desk, then in the field look at a
+gallery of images for inspiration. That is not two devices sharing a document —
+it is one device that occasionally emits a read-only artefact. Once the phone
+only receives a gallery, everything that existed to serve two-way sync stops
+earning its place.
+
+### Why not a browser app
+
+Browser storage is evictable and the owner cannot recover from a silent wipe
+without help. A file on disk can be copied, inspected, and backed up by any
+ordinary means.
+
+### What this removed
+
+The Cloudflare Worker, both KV namespaces, the shared secret, bidirectional
+sync, the 409 conflict prompt, "Reload theirs / Keep mine", the offline
+fallback, PWA installability, and the iOS 7-day storage eviction problem.
+
+`worker/` and `spike/` are **superseded and no longer part of the build.** They
+are left in the tree for now rather than deleted; git history has them either
+way. The deployed Worker and Pages project still exist on Cloudflare, cost
+nothing, and can be torn down whenever.
+
+### Storage on disk
+
+Default `Documents\Board App\`:
+
+```
+Board App/
+  boards.json        all boards, human-readable
+  images/            one file per image, content-typed extension
+```
+
+Backup is "put that folder in OneDrive" — version history and off-machine
+copies for free, nothing to configure. The format is deliberately inspectable:
+if the app breaks, the notes are still text and the images are still images.
+
+Export/Import JSON stays as a feature per `SPEC.md`, but it is an escape hatch,
+not the backup strategy.
+
+### The phone gallery
+
+Desktop writes a **single self-contained HTML file** with images embedded, which
+the owner AirDrops to the phone. Fully offline, fully private, nothing on the
+internet. Re-exported when the board changes.
+
+The size arithmetic works because images are already downscaled on import —
+roughly 200 KB each, so thirty images is about 6 MB. Fine for AirDrop.
 
 ---
 
@@ -10,31 +69,32 @@ departed from it.
 
 ### Operating constraint: no terminal, ever, to use the app
 
-Stated explicitly by the owner and it outranks convenience elsewhere. The app
-has to keep working indefinitely with no command line, no Wrangler, and no
-help. Consequences:
+Stated explicitly by the owner. The finished app has to keep working with no
+command line and no help. Going standalone satisfies most of this by
+construction — there is no login, no token, and no storage that expires.
 
-- **Wrangler auth is irrelevant to using the app.** The Worker runs deployed
-  and does not care whether anyone holds a valid Wrangler token. Expiry only
-  ever blocks *deploying*.
-- **The shared secret must behave like a login.** Any 401 shows a "paste your
-  key" screen, not an error. One paste and you are back. Never a dead end, never
-  a diagnostic.
-- **The app must be installable to the home screen.** iOS Safari clears
-  script-writable storage (localStorage *and* IndexedDB) after roughly seven
-  days without a first-party visit, which would take the secret and the offline
-  cache with it. Home-screen web apps are exempt. This makes installability a
-  requirement, not polish — it is what keeps the secret from evaporating over a
-  holiday. Pair with `navigator.storage.persist()`.
-- **Nothing may require a payment method.** Hence KV over R2 below.
+Two residual costs, both accepted:
+
+- Windows SmartScreen warns "unknown publisher" on first install. One click
+  through *More info → Run anyway*. Code signing is not worth it for one user.
+- Updates mean running a new installer. The data folder is untouched by this.
+  Auto-update needs somewhere to host updates; add only if wanted.
+
+Changing the app still needs a developer environment. Using it never does.
 
 ### Stack
 
-Vanilla JS + ES modules + Vite, per spec Principle 1. An earlier suggestion of
-React was withdrawn — the spec's reason (following the state flow without a
-framework's mental model first) holds.
+**Electron, with a Vite + vanilla JS renderer.**
 
-What the handoff's §5.3 actually asks for is **keyed reconciliation**, not a
+Vanilla JS per `SPEC.md` Principle 1 — an earlier suggestion of React was
+withdrawn, and Electron does not disturb that, since the renderer is an ordinary
+web page.
+
+Electron over Tauri because Tauri needs a Rust toolchain installed before it can
+build anything, and Electron needs only the Node already present. A 200 MB app
+is irrelevant for a personal tool.
+
+What `PROTOTYPE-HANDOFF.md` §5.3 asks for is **keyed reconciliation**, not a
 framework: the card layer diffs `cards` against a `Map<id, element>` and reuses
 elements rather than rebuilding them. Full rebuilds are what destroy focus and
 swallow gesture targets. Everything else stays imperative.
@@ -50,7 +110,7 @@ let state = {
 };
 ```
 
-This departs from a literal reading of spec Principle 4, which puts nested
+This departs from a literal reading of `SPEC.md` Principle 4, which puts nested
 boards in Phase 4. Features still land in spec order — no board cards,
 breadcrumbs or switcher before Phase 4. Only the container shape comes early,
 because the prototype already paid for this refactor once (commit `7fa1c1b`)
@@ -60,35 +120,19 @@ lookup.
 
 ### Images
 
-Never inline. Cards carry `{ imageId, mime, naturalW, naturalH, alt }` — the
-intrinsic dimensions live on the card so layout never waits on a blob load.
+Never inline in `boards.json`. Cards carry
+`{ imageId, mime, naturalW, naturalH, alt }` — the intrinsic dimensions live on
+the card so layout never waits on a file read.
 
-**Server-side images live in KV, not the R2 the spec names.** R2 requires a
-card on file even on its free tier, and we did not want to add one. KV is free,
-and a second namespace (`IMAGES`, separate from `BOARDS`) keeps the binding name
-and the code shape identical, so switching to R2 later is a small change.
-
-The limits KV imposes are comfortable here: 25 MiB per value against our ~200 KB
-images, and 1 GB free in total — roughly 5,000 images. Two consequences to know:
-
-- KV is eventually consistent, so an image uploaded on one device can 404 on the
-  other for up to about a minute. The uploading device has it in IndexedDB
-  already, so this only ever affects the *other* device immediately after an
-  upload. Phase 3 should retry rather than treat a 404 as permanent.
-- There is no delete route for images, matching the "never delete a blob during
-  a session" rule above.
-
-Blobs are stored as native `Blob`s in IndexedDB (no base64, so no 33% encoding
-tax and no string cloning) and in KV on the server, fetched through
-`URL.createObjectURL()` into an in-memory `Map<imageId, url>`. Object URLs are
-runtime state and stay out of `state`.
+Files on disk under `images/`, loaded into an in-memory `Map<imageId, objectUrl>`
+for rendering. Object URLs are runtime state and stay out of `state`.
 
 **On import: downscale to max edge 1280px, re-encode WebP q0.8.** A 4 MB phone
-photo lands around 150–250 KB. This is a planning tool, not a photo library,
-and there is no zoom to expose the loss. Two details at import time:
+photo lands around 150–250 KB. This is a planning tool, not a photo library, and
+there is no zoom to expose the loss. Two details at import time:
 
 - Honour EXIF rotation (`createImageBitmap(file, { imageOrientation: "from-image" })`),
-  or portrait phone photos land sideways.
+  or portrait photos land sideways.
 - If an original is already smaller than its re-encode, store the original.
 
 ### Undo
@@ -99,87 +143,62 @@ The handoff's §5.2 worry about snapshot cost was really §5.1 in disguise — o
 images are references, a snapshot is just text, coordinates and ids, and 50 of
 them is single-digit MB. Keeping the simple version.
 
-**Undo is session-scoped and does not survive a reload** (handoff open question
+**Undo is session-scoped and does not survive a restart** (handoff open question
 2). Persisting history is what would force a command log; not worth it.
 
-Typing coalesces on **blur only**, not the spec's "or after a ~500ms pause".
-The pause variant fires a history entry while the caret is still in the box,
-gives several entries per editing session, and re-opens the ordering bug the
-handoff describes in §2.2.
+Typing coalesces on **blur only**, not the spec's "or after a ~500ms pause". The
+pause variant fires a history entry while the caret is still in the box, gives
+several entries per editing session, and re-opens the ordering bug the handoff
+describes in §2.2.
 
-### Blob lifetime
+### Image lifetime
 
-Duplicating a card copies the `imageId`, so two cards can share a blob —
-refcounting on delete is therefore wrong, and undo holding states that
-reference deleted blobs makes it worse. **Never delete a blob during a
-session.** Sweep unreachable ones at startup, when both history stacks are
-empty and reachability is unambiguous.
+Duplicating a card copies the `imageId`, so two cards can share a file —
+refcounting on delete is therefore wrong, and undo holding states that reference
+deleted images makes it worse. **Never delete an image file during a session.**
+Sweep unreferenced ones at startup, when both history stacks are empty and
+reachability is unambiguous.
 
-### Where the spec and the prototype handoff disagreed
+### Where `SPEC.md` and `PROTOTYPE-HANDOFF.md` disagreed
+
+Resolved before the desktop change; all still stand.
 
 | | Resolution |
 |---|---|
-| Board card carries a `title` (spec) vs id only (handoff §1) | **Id only.** Titles come from the `index` key, so an unloaded board still renders. |
+| Board card carries a `title` (spec) vs id only (handoff §1) | **Id only.** Titles are read from the target board, so renaming updates every card pointing at it. |
 | Typing pushes on blur or a 500ms pause (spec) vs blur only (handoff §2.1) | **Blur only** — see above. |
-| Export the current board (spec) vs whole state (handoff) | **Whole state.** A backup that covers one board is not a backup. Keeps the legacy migration in handoff §5.4. |
+| Export the current board (spec) vs whole state (handoff) | **Whole state.** A backup covering one board is not a backup. Keeps the legacy migration in handoff §5.4. |
 | Canvas 5000 (spec) vs 3000 (prototype) | **5000**, per spec. |
 | Board creation prompts for a title (spec) vs no modals (handoff, commit `adc3335`) | **No modal** — create immediately, rename inline. Add a hover cue, since handoff §6.6 flags the gesture is not discoverable. |
-| Back via `history.pushState` (spec) vs a `backStack` array (handoff §3) | **pushState**, so the phone's back gesture works. `trail` stays separate — it cannot be computed from the data. |
+| Back via `history.pushState` (spec) vs a `backStack` array (handoff §3) | **`backStack`** now. `pushState` was chosen to make the phone's back gesture work, and there is no phone any more. `trail` stays separate — it cannot be computed from the data. |
 
 ---
 
-## Phase 0 — sync spike
+## Revised phases
 
-`worker/` is the API. `spike/` is a throwaway page that exercises it; delete it
-once Phase 1 starts.
-
-### Deployed
+`SPEC.md`'s Phase 0 and Phase 3 were both about the server and are gone.
 
 | | |
 |---|---|
-| Worker | `https://noteapp-api.photostoneman.workers.dev` |
-| Spike page | `https://noteapp-spike.pages.dev` |
-| KV `BOARDS` | `78f7c749273644f7ae0efe07de0d08ca` |
-| KV `IMAGES` | `f4f3f64785714b03b25b04c847bc6a5d` |
+| **Phase 1** | Electron shell, scrollable canvas, text cards, drag, resize, select, delete, create. One state object, `applyChange()`, undo/redo, save to `boards.json`. |
+| **Phase 2** | List, image and swatch cards. Image files on disk. |
+| **Phase 3** | Gallery export — the self-contained HTML file. |
+| **Phase 4** | Nested boards: board cards, breadcrumbs, back, board switcher. |
+| **Phase 5** | Polish, keyboard shortcuts, empty states, packaging the installer. |
 
-The shared secret is a Worker secret named `SHARED_SECRET`. Rotate it with
-`wrangler secret put SHARED_SECRET` and re-paste on each device.
+---
 
-### Redeploying
+## Superseded: Phase 0 sync spike
 
-```sh
-npx --prefix worker wrangler deploy --config worker/wrangler.toml
-npx --prefix worker wrangler pages deploy spike --project-name noteapp-spike
-```
+Kept for the record. The Worker at
+`https://noteapp-api.photostoneman.workers.dev` and the spike page at
+`https://noteapp-spike.pages.dev` were built, deployed and verified: auth
+guards, board round-trip, the 409 conflict guard and its force escape, body
+validation, and image upload/dedupe/download with byte-identical results.
 
-### Two traps hit during setup, recorded so they are not re-hit
+Two traps hit there, worth remembering if anything Cloudflare ever comes back:
 
-- **Piping a secret from PowerShell appends a newline**, which produced an
-  intermittent 401. Use `printf '%s'` from bash, and note the Worker now
-  `.trim()`s the secret defensively.
-- **Changing a secret does not restart live isolates.** Instances started before
-  the change keep serving the old value, so auth flaps between 200 and 401 until
-  they recycle. A `wrangler deploy` forces new isolates and settles it
-  immediately. This will look like a bug and is not one.
-
-### What must pass before Phase 1
-
-1. **PUT board** on the laptop, **GET board** on the phone — the text names the
-   device and time that wrote it.
-2. **GET index** lists `b_spike`.
-3. **No auth** and **wrong secret** both return 401.
-4. **Stale PUT** returns 409, then the forced retry returns 200.
-5. **Image round-trip** shows the preview and matching byte counts.
-
-### Deferred
-
-- KV index updates are read-modify-write. Safe for one user with debounced
-  writes; two devices saving different boards inside KV's propagation window
-  could drop an index entry. The board itself is never lost and the next save
-  of it repairs the index.
-- CORS is `*`. Fine because the bearer secret guards the data and we never
-  authenticate with cookies.
-- No confirmation on destructive actions yet (handoff §5.5). Revisit at
-  Phase 5 — undo is one keystroke on a laptop but there is no Ctrl+Z on touch.
-- Board deletion leaves cards pointing at the deleted board as visibly broken
-  links, never a throw (handoff §4). Whether to warn first is open.
+- Piping a secret from PowerShell appends a newline, producing an intermittent
+  401. Use `printf '%s'` from bash.
+- Changing a Worker secret does not restart live isolates, so auth flaps between
+  200 and 401 until they recycle. A `wrangler deploy` forces new isolates.
