@@ -192,20 +192,19 @@ export function makeCard(type, x, y, extra) {
   const size = DEFAULT_SIZE[type];
   const card = { id: uid("c"), type, x: Math.round(x), y: Math.round(y), w: size.w, h: size.h };
 
-  if (type === "text") card.text = "";
+  if (type === "text") {
+    card.text = "";
+    card.accent = null;
+  }
 
   if (type === "list") {
     card.items = [{ id: uid("i"), text: "", checked: false }];
     card.checkable = false;
+    card.accent = null;
   }
 
   if (type === "image") {
     Object.assign(card, { imageId: null, mime: "image/webp", naturalW: 0, naturalH: 0, alt: "" });
-  }
-
-  if (type === "swatch") {
-    card.colour = "#c8a45e";
-    card.label = "";
   }
 
   // Applied last, so an imported image can bring its own size and dimensions.

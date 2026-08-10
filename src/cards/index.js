@@ -9,15 +9,15 @@
  * `update(card, el)`, and optionally `buildGrip(card, el, rail)`.
  */
 
-import { deleteCard } from "../store.js";
+import { ACCENTABLE, ACCENT_DEFAULT, isDarkColour } from "../constants.js";
+import { commitEdit, deleteCard, getCard, stashEdit, touch } from "../store.js";
 import { attachDrag, attachResize } from "../gestures.js";
 
 import * as text from "./text.js";
 import * as list from "./list.js";
 import * as image from "./image.js";
-import * as swatch from "./swatch.js";
 
-const TYPES = { text, list, image, swatch };
+const TYPES = { text, list, image };
 
 export function buildCard(card, scroller) {
   const el = document.createElement("div");
@@ -34,6 +34,7 @@ export function buildCard(card, scroller) {
   rail.className = "card-grip-rail";
   grip.appendChild(rail);
 
+  if (ACCENTABLE.includes(card.type)) buildAccent(card, el, rail);
   if (type && type.buildGrip) type.buildGrip(card, el, rail);
 
   const del = document.createElement("button");
@@ -48,9 +49,19 @@ export function buildCard(card, scroller) {
   const body = document.createElement("div");
   body.className = "card-body";
 
-  // An unknown type must render as an empty card, never throw — otherwise one
-  // bad entry in boards.json takes the whole board down.
-  if (type) type.build(card, el, body);
+  el.__grip = grip;
+
+  if (type) {
+    type.build(card, el, body);
+  } else {
+    // A type we no longer support — a swatch from an older board, say. Say so
+    // rather than rendering a blank card or, worse, throwing and taking the
+    // whole board down.
+    const note = document.createElement("p");
+    note.className = "card-unknown";
+    note.textContent = `Unsupported card (${card.type}) — delete it`;
+    body.appendChild(note);
+  }
 
   const resize = document.createElement("div");
   resize.className = "card-resize";
@@ -72,6 +83,56 @@ export function updateCard(el, card, index, selectedId) {
   el.style.zIndex = String(index + 1);
   el.classList.toggle("is-selected", card.id === selectedId);
 
+  if (ACCENTABLE.includes(card.type)) {
+    paintAccent(el, card.accent);
+    if (el.__accentPicker && document.activeElement !== el.__accentPicker) {
+      el.__accentPicker.value = card.accent || ACCENT_DEFAULT;
+    }
+  }
+
   const type = TYPES[card.type];
   if (type && type.update) type.update(card, el);
+}
+
+/* ---------------------------------------------------------------- accent --- */
+
+/**
+ * Tinting the top bar, for colour-coding a board by eye.
+ *
+ * A native colour input, for the same reason the old swatch card used one:
+ * the OS picker is better than anything worth building here, and it costs one
+ * element.
+ */
+function buildAccent(card, el, rail) {
+  const picker = document.createElement("input");
+  picker.type = "color";
+  picker.className = "card-accent";
+  picker.value = card.accent || ACCENT_DEFAULT;
+  picker.title = "Change this card's colour";
+  picker.setAttribute("aria-label", "Card colour");
+
+  picker.addEventListener("input", () => {
+    const target = getCard(card.id);
+    if (!target) return;
+
+    stashEdit();
+    target.accent = picker.value;
+    paintAccent(el, picker.value);
+    touch();
+  });
+
+  // Dragging around the colour wheel fires input continuously; change fires
+  // once when the dialog is dismissed. That is the end of the editing session.
+  picker.addEventListener("change", commitEdit);
+
+  el.__accentPicker = picker;
+  rail.appendChild(picker);
+}
+
+function paintAccent(el, colour) {
+  const grip = el.__grip;
+  if (!grip) return;
+
+  grip.style.background = colour || "";
+  grip.classList.toggle("is-dark", !!colour && isDarkColour(colour));
 }

@@ -98,7 +98,6 @@ function addFromToolbar(type) {
 
 $("addText").addEventListener("click", () => addFromToolbar("text"));
 $("addList").addEventListener("click", () => addFromToolbar("list"));
-$("addSwatch").addEventListener("click", () => addFromToolbar("swatch"));
 
 $("addImage").addEventListener("click", () => {
   const input = document.createElement("input");

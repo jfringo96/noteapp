@@ -84,6 +84,30 @@ risk. That was really §5.1 in disguise: the cost was images being inlined. Once
 images are references, a snapshot is text, coordinates and ids, and 50 of them
 is single-digit MB. The simple version stays.
 
+### Swatch cards dropped; tinting added instead
+
+Swatches existed to pull palettes out of photographs. The owner had no use for
+them. Removed entirely rather than left in as dead weight.
+
+What replaced them is smaller and more useful: text and list cards can have
+their top bar tinted from a colour chip in that bar, for colour-coding a board
+by eye. It reuses the swatch's one good idea — a native `<input type="color">`
+beats anything worth hand-building.
+
+Cards of a removed type render as "Unsupported card — delete it" rather than
+blank or throwing, so an older `boards.json` still opens.
+
+### Cream ground, and frameless image cards
+
+`SPEC.md` originally specified a dark slate canvas, so photographs and colours
+would read accurately against it. The owner asked for cream. Done — this is a
+notes surface first and text reads better on it. Worth revisiting only if
+images start looking washed out.
+
+Image cards lost their frame at the same time: no paper, no letterbox fill, and
+the grip floats over the top edge on hover instead of taking a strip out of the
+card. An image card is now the photograph and nothing else.
+
 ### Image sizing
 
 1280px max edge, WebP q0.8 — chosen deliberately small. This is for inspiration
@@ -141,8 +165,8 @@ same `Documents\Board App\` folder, so there is only ever one set of notes.
 - **List rows clip long text** rather than wrapping — they're single-line
   inputs, as specified (handoff open question 5).
 - **Auto-update.** Needs somewhere to host updates. Add only if wanted.
-- **Picking a colour from an image card** into a swatch. Spec says do it only if
-  straightforward.
+- **Clearing a card's tint** back to the default. Right now you pick a pale
+  colour instead. Fine until it isn't.
 - **The card-type picker on double-click.** `SPEC.md` asks for a small picker at
   the click point. In Phase 1 there is only one card type, so double-click
   creates a text card directly — a picker offering one option is pure friction.

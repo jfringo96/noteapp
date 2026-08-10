@@ -111,26 +111,24 @@ and a push.
 // Card — common fields
 {
   id: "c_abc123",
-  type: "text" | "list" | "image" | "swatch" | "board",
+  type: "text" | "list" | "image" | "board",
   x: 400, y: 220,            // top-left, canvas coordinates
   w: 240, h: 160,
   // ...type-specific fields below
 }
 
 // type: "text"
-{ text: "plain string, newlines allowed" }
+{ text: "plain string, newlines allowed", accent: null }
 
 // type: "list"
 {
   items: [{ id: "i_1", text: "buy film", checked: false }],
-  checkable: false           // false = bullet list, true = checklist
+  checkable: false,          // false = bullet list, true = checklist
+  accent: null               // hex string, or null for the default
 }
 
 // type: "image"
 { imageId: "img_xyz", mime: "image/webp", naturalW: 1280, naturalH: 853, alt: "" }
-
-// type: "swatch"
-{ colour: "#c8a45e", label: "" }
 
 // type: "board"
 { targetBoardId: "b_trip2026" }
@@ -251,17 +249,18 @@ undone, or redo re-applies a change on a board I'm not looking at.
 
 **text** — an auto-growing textarea filling the card. Plain text only.
 
+Text and list cards can have their top bar tinted, via a small colour chip in
+that bar. This is for colour-coding a board by eye. Icons in the bar flip to
+white when the chosen colour is dark enough to swallow them.
+
 **list** — rows of single-line inputs. Enter creates a new row below and focuses
 it. Backspace on an empty row deletes it and focuses the row above, cursor at
 end. A per-card toggle switches between bullets and checkboxes; checked rows get
 strikethrough.
 
-**image** — displays the file, `object-fit: contain`.
-
-**swatch** — a solid colour block with an optional one-line label, set via a
-native `<input type="color">`. This is for building palettes from photos, so
-also let me pick a colour from an image card if that's straightforward —
-otherwise skip it.
+**image** — the photograph and nothing else. No paper, no frame, no letterbox
+fill. The grip floats over the top edge rather than taking a strip out of the
+card, and appears on hover or selection.
 
 **board** — a card showing the target board's title and card count. Clicking it
 navigates there. Creating one makes the new empty board immediately and
@@ -313,8 +312,8 @@ escape hatch, not the backup strategy — the backup strategy is the folder.
 drag, resize, select, delete, create. One state object, `applyChange()`,
 undo/redo, saving to `boards.json`.
 
-**Phase 2 — card types.** List, image, swatch. Image files on disk, downscaling
-on import.
+**Phase 2 — card types.** List and image. Image files on disk, downscaling on
+import. Tinting for text and list cards.
 
 **Phase 3 — gallery export.** The self-contained HTML file. Export/Import JSON.
 
@@ -331,11 +330,15 @@ installer, whatever's annoying by then.
 Don't leave this on browser defaults, but keep it quiet — this is a tool, not a
 landing page.
 
-The canvas is dark: a deep slate ground with a low-contrast dot grid, so
-photographs and colour swatches read accurately rather than being washed out by
-a white page. Cards are warm off-white paper with a real drop shadow, sitting
-clearly above the ground. One accent colour only, for selection rings and focus
-states — muted and slightly earthy rather than a saturated UI blue.
+The canvas is a warm cream ground with a low-contrast dot grid. Cards are
+near-white paper with a real drop shadow, sitting clearly above it. One accent
+colour only, for selection rings and focus states — muted and earthy rather
+than a saturated UI blue.
+
+(An earlier version specified a dark slate ground, on the grounds that
+photographs read more accurately against it. Cream was chosen anyway: this is a
+notes surface first, and it's pleasanter to read text on. Worth revisiting only
+if images start looking washed out in practice.)
 
 System font stacks. A proper type scale rather than everything at 16px, and
 comfortable line height in cards — I'll be reading notes in these.

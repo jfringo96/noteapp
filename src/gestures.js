@@ -25,10 +25,10 @@ export function attachDrag(grip, el, cardId, scroller) {
   let startScrollTop = 0;
 
   grip.addEventListener("pointerdown", (event) => {
-    // Buttons living in the grip — delete, and the list's bullet/checkbox
-    // toggle — must not start a drag. This handler calls preventDefault, which
-    // swallows the click that would otherwise reach them.
-    if (event.button !== 0 || event.target.closest("button")) return;
+    // Controls living in the grip — delete, the colour picker, the list's
+    // bullet/checkbox toggle — must not start a drag. This handler calls
+    // preventDefault, which swallows the click that would reach them.
+    if (event.button !== 0 || event.target.closest("button, input, select, label")) return;
     if (!getCard(cardId)) return;
 
     select(cardId);

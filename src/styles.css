@@ -1,19 +1,19 @@
 /* Quiet on purpose. This is a tool, not a landing page. */
 
 :root {
-  --ground: #1b1e24;
-  --ground-dot: #2b3038;
-  --chrome: #16191e;
-  --chrome-line: #2a2f37;
-  --paper: #f4f0e8;
-  --ink: #23262b;
-  --muted: #8b919b;
-  --accent: #c8a45e;
+  --ground: #e7dfd0;
+  --ground-dot: #d2c7b1;
+  --chrome: #f1ebdf;
+  --chrome-line: #d8ccb6;
+  --paper: #fffdf9;
+  --ink: #2f2c26;
+  --muted: #8a8272;
+  --accent: #a2662f;
 
   --radius: 6px;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 20px rgb(0 0 0 / 0.32);
+  --shadow: 0 1px 2px rgb(60 45 20 / 0.16), 0 6px 16px rgb(60 45 20 / 0.14);
 
-  color-scheme: dark;
+  color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.5;
@@ -26,7 +26,7 @@ html, body {
   margin: 0;
   overflow: hidden;
   background: var(--ground);
-  color: var(--paper);
+  color: var(--ink);
 }
 
 :focus-visible {
@@ -52,7 +52,7 @@ html, body {
   padding: .25rem .4rem;
   font: inherit;
   font-size: 1.0625rem;
-  color: var(--paper);
+  color: var(--ink);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -67,15 +67,15 @@ html, body {
   padding: .3rem .7rem;
   font: inherit;
   font-size: .875rem;
-  color: var(--paper);
-  background: #242932;
-  border: 1px solid #333944;
+  color: var(--ink);
+  background: #fbf7ef;
+  border: 1px solid var(--chrome-line);
   border-radius: 4px;
   cursor: pointer;
 }
 
-.topbar-actions button:hover:not(:disabled) { background: #2c323c; }
-.topbar-actions button:disabled { opacity: .38; cursor: default; }
+.topbar-actions button:hover:not(:disabled) { background: #fff; border-color: #c3b498; }
+.topbar-actions button:disabled { opacity: .4; cursor: default; }
 
 .divider {
   width: 1px;
@@ -99,6 +99,8 @@ html, body {
   background-size: 24px 24px;
 }
 
+.scroller.is-drop-target { outline: 2px dashed var(--accent); outline-offset: -6px; }
+
 .empty-state {
   position: absolute;
   left: 50%;
@@ -117,12 +119,44 @@ html, body {
   margin: 0;
   padding: .4rem .6rem;
   font-size: .8125rem;
-  color: #f0d5d5;
-  background: #4a2b2b;
+  color: #5c1f1f;
+  background: #f6dcdc;
+  border: 1px solid #e0b4b4;
   border-radius: 4px;
 }
 
 .status[hidden] { display: none; }
+
+/* ------------------------------------------------------------------ picker */
+
+.picker {
+  position: fixed;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  min-width: 8rem;
+  padding: .25rem;
+  background: #fffdf9;
+  border: 1px solid var(--chrome-line);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgb(60 45 20 / 0.22);
+}
+
+.picker[hidden] { display: none; }
+
+.picker button {
+  padding: .4rem .6rem;
+  font: inherit;
+  font-size: .875rem;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.picker button:hover { background: #f0e8d8; }
 
 /* ------------------------------------------------------------------- cards */
 
@@ -136,62 +170,23 @@ html, body {
   box-shadow: var(--shadow);
 }
 
-.card.is-selected {
-  box-shadow: var(--shadow), 0 0 0 2px var(--accent);
-}
+.card.is-selected { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
 
 .card.is-dragging {
-  box-shadow: 0 2px 4px rgb(0 0 0 / 0.4), 0 18px 36px rgb(0 0 0 / 0.4);
+  box-shadow: 0 2px 6px rgb(60 45 20 / 0.22), 0 16px 32px rgb(60 45 20 / 0.22);
   cursor: grabbing;
 }
 
 .card.is-dragging,
-.card.is-resizing {
-  user-select: none;
-}
-
-.scroller.is-drop-target { outline: 2px dashed var(--accent); outline-offset: -6px; }
-
-/* ------------------------------------------------------------------ picker */
-
-.picker {
-  position: fixed;
-  z-index: 500;
-  display: flex;
-  flex-direction: column;
-  min-width: 8rem;
-  padding: .25rem;
-  background: #232830;
-  border: 1px solid #39404b;
-  border-radius: 6px;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
-}
-
-.picker[hidden] { display: none; }
-
-.picker button {
-  padding: .4rem .6rem;
-  font: inherit;
-  font-size: .875rem;
-  text-align: left;
-  color: var(--paper);
-  background: none;
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.picker button:hover { background: #2f3641; }
-
-/* ------------------------------------------------------------------- cards */
+.card.is-resizing { user-select: none; }
 
 .card-grip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex: 0 0 18px;
+  flex: 0 0 20px;
   border-radius: var(--radius) var(--radius) 0 0;
-  background: rgb(0 0 0 / 0.06);
+  background: rgb(90 70 35 / 0.07);
   cursor: grab;
   /* Only on the grip and the resize handle, so the canvas still scrolls by
      touch everywhere else. */
@@ -200,13 +195,16 @@ html, body {
 
 .card-grip:active { cursor: grabbing; }
 
+.card-grip-rail { display: flex; align-items: center; gap: 3px; padding-left: 3px; }
+
 .card-delete {
-  width: 18px;
+  width: 20px;
   height: 18px;
+  margin-right: 2px;
   padding: 0;
   font-size: 14px;
   line-height: 1;
-  color: var(--ink);
+  color: inherit;
   background: none;
   border: 0;
   border-radius: 3px;
@@ -216,16 +214,63 @@ html, body {
 
 .card:hover .card-delete,
 .card-delete:focus-visible { opacity: .55; }
-.card-delete:hover { opacity: 1; background: rgb(0 0 0 / 0.08); }
+.card-delete:hover { opacity: 1; background: rgb(0 0 0 / 0.1); }
+
+.card-grip-btn {
+  width: 20px;
+  height: 16px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  background: rgb(0 0 0 / 0.05);
+  border: 0;
+  border-radius: 3px;
+  opacity: .75;
+  cursor: pointer;
+}
+
+.card-grip-btn:hover { opacity: 1; background: rgb(0 0 0 / 0.14); }
+
+/* The tint control. A native colour input, styled down to a small chip. */
+.card-accent {
+  width: 20px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.card-accent::-webkit-color-swatch-wrapper { padding: 1px; }
+.card-accent::-webkit-color-swatch {
+  border: 1px solid rgb(0 0 0 / 0.28);
+  border-radius: 2px;
+}
+
+/* Icons flip to light when the chosen tint is dark enough to swallow them. */
+.card-grip.is-dark { color: #fff; }
+.card-grip.is-dark .card-grip-btn { background: rgb(255 255 255 / 0.18); }
+.card-grip.is-dark .card-delete:hover,
+.card-grip.is-dark .card-grip-btn:hover { background: rgb(255 255 255 / 0.3); }
 
 .card-body {
   flex: 1;
   min-height: 0;
   display: flex;
-  /* Column, because a swatch stacks its colour block above its label. The
-     single-child types don't care which way this runs. */
+  /* Column, so a card can stack more than one thing in its body. */
   flex-direction: column;
 }
+
+.card-unknown {
+  margin: 0;
+  padding: .6rem .65rem;
+  font-size: .8125rem;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- text cards */
 
 .card-text-input {
   flex: 1;
@@ -242,7 +287,106 @@ html, body {
 }
 
 .card-text-input:focus { outline: none; }
-.card-text-input::placeholder { color: #b4ab9c; }
+.card-text-input::placeholder { color: #b9b09e; }
+
+/* -------------------------------------------------------------- list cards */
+
+.list-rows {
+  flex: 1;
+  overflow-y: auto;
+  padding: .35rem .5rem .5rem;
+}
+
+.list-row { display: flex; align-items: center; gap: .4rem; }
+
+.list-bullet {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  margin: 0 2px;
+  background: #9a9082;
+  border-radius: 50%;
+}
+
+.list-check { flex: 0 0 auto; margin: 0; accent-color: var(--accent); }
+
+/* One marker or the other, never both — swapping is a class, not a rebuild. */
+.list-row.is-checkable .list-bullet { display: none; }
+.list-row:not(.is-checkable) .list-check { display: none; }
+
+.list-input {
+  flex: 1;
+  min-width: 0;
+  padding: .15rem 0;
+  font: inherit;
+  font-size: .9375rem;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-overflow: ellipsis;
+}
+
+.list-input:focus { outline: none; }
+.list-row.is-checked .list-input { color: #9a9082; text-decoration: line-through; }
+
+/* ------------------------------------------------------------- image cards */
+
+/*
+ * An image card is the photograph and nothing else — no paper, no frame. The
+ * grip floats over the top edge instead of taking a strip out of the card, and
+ * only appears when you are pointing at it.
+ */
+.card-image {
+  background: none;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.card-image .card-grip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  color: #fff;
+  background: linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0));
+  border-radius: 3px 3px 0 0;
+  opacity: 0;
+}
+
+.card-image:hover .card-grip,
+.card-image.is-selected .card-grip,
+.card-image .card-grip:focus-within { opacity: 1; }
+
+.card-image .card-delete { opacity: .8; }
+.card-image .card-delete:hover { opacity: 1; background: rgb(255 255 255 / 0.25); }
+
+.card-image .card-body { position: absolute; inset: 0; }
+
+.card-image .card-resize::after { border-color: rgb(255 255 255 / 0.85); }
+
+.image-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-el { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.image-missing {
+  position: absolute;
+  padding: .3rem .5rem;
+  font-size: .8125rem;
+  color: var(--muted);
+  background: var(--paper);
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------ resize handle */
 
 .card-resize {
   position: absolute;
@@ -266,139 +410,6 @@ html, body {
   height: 7px;
   border-right: 2px solid rgb(0 0 0 / 0.35);
   border-bottom: 2px solid rgb(0 0 0 / 0.35);
-}
-
-/* --------------------------------------------------------------- grip rail */
-
-.card-grip-rail { display: flex; align-items: center; gap: 2px; padding-left: 3px; }
-
-.card-grip-btn {
-  width: 20px;
-  height: 16px;
-  padding: 0;
-  font-size: 12px;
-  line-height: 1;
-  color: var(--ink);
-  background: rgb(0 0 0 / 0.05);
-  border: 0;
-  border-radius: 3px;
-  opacity: .7;
-  cursor: pointer;
-}
-
-.card-grip-btn:hover { opacity: 1; background: rgb(0 0 0 / 0.12); }
-
-/* -------------------------------------------------------------- list cards */
-
-.list-rows {
-  flex: 1;
-  overflow-y: auto;
-  padding: .35rem .5rem .5rem;
-}
-
-.list-row { display: flex; align-items: center; gap: .4rem; }
-
-.list-bullet {
-  flex: 0 0 auto;
-  width: 5px;
-  height: 5px;
-  margin: 0 2px;
-  background: #9a9082;
-  border-radius: 50%;
-}
-
-.list-check { flex: 0 0 auto; margin: 0; accent-color: #7a6a4a; }
-
-/* One marker or the other, never both — swapping is a class, not a rebuild. */
-.list-row.is-checkable .list-bullet { display: none; }
-.list-row:not(.is-checkable) .list-check { display: none; }
-
-.list-input {
-  flex: 1;
-  min-width: 0;
-  padding: .15rem 0;
-  font: inherit;
-  font-size: .9375rem;
-  color: var(--ink);
-  background: none;
-  border: 0;
-  text-overflow: ellipsis;
-}
-
-.list-input:focus { outline: none; }
-.list-row.is-checked .list-input { color: #9a9082; text-decoration: line-through; }
-
-/* ------------------------------------------------------------- image cards */
-
-.image-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: 0 0 var(--radius) var(--radius);
-  background: #e7e1d6;
-}
-
-.image-el { width: 100%; height: 100%; object-fit: contain; }
-
-.image-missing {
-  position: absolute;
-  font-size: .8125rem;
-  color: #9a9082;
-}
-
-/* ------------------------------------------------------------ swatch cards */
-
-.swatch-block {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* The native picker fills the block so clicking the colour opens it. */
-.swatch-picker {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.swatch-foot {
-  display: flex;
-  align-items: baseline;
-  gap: .4rem;
-  flex: 0 0 auto;
-  padding: .35rem .5rem .45rem;
-}
-
-.swatch-label {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  font: inherit;
-  font-size: .875rem;
-  color: var(--ink);
-  background: none;
-  border: 0;
-  text-overflow: ellipsis;
-}
-
-.swatch-label:focus { outline: none; }
-.swatch-label::placeholder { color: #b4ab9c; }
-
-.swatch-hex {
-  flex: 0 0 auto;
-  font-size: .6875rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .03em;
-  color: #9a9082;
 }
 
 @media (prefers-reduced-motion: reduce) {
