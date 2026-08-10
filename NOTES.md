@@ -8,6 +8,26 @@ departed from it.
 
 ## Decisions
 
+### Operating constraint: no terminal, ever, to use the app
+
+Stated explicitly by the owner and it outranks convenience elsewhere. The app
+has to keep working indefinitely with no command line, no Wrangler, and no
+help. Consequences:
+
+- **Wrangler auth is irrelevant to using the app.** The Worker runs deployed
+  and does not care whether anyone holds a valid Wrangler token. Expiry only
+  ever blocks *deploying*.
+- **The shared secret must behave like a login.** Any 401 shows a "paste your
+  key" screen, not an error. One paste and you are back. Never a dead end, never
+  a diagnostic.
+- **The app must be installable to the home screen.** iOS Safari clears
+  script-writable storage (localStorage *and* IndexedDB) after roughly seven
+  days without a first-party visit, which would take the secret and the offline
+  cache with it. Home-screen web apps are exempt. This makes installability a
+  requirement, not polish — it is what keeps the secret from evaporating over a
+  holiday. Pair with `navigator.storage.persist()`.
+- **Nothing may require a payment method.** Hence KV over R2 below.
+
 ### Stack
 
 Vanilla JS + ES modules + Vite, per spec Principle 1. An earlier suggestion of
