@@ -2,7 +2,8 @@
  * Board app API — a single Cloudflare Worker.
  *
  * Boards live in KV as JSON, one key per board, plus an `index` key listing
- * them all. Images live in R2 and are immutable once written.
+ * them all. Images live in a second KV namespace and are immutable once
+ * written — see NOTES.md for why KV rather than the R2 the spec names.
  *
  * Every route requires `Authorization: Bearer <SHARED_SECRET>`. There is one
  * user, so there is one secret and no accounts.
@@ -16,6 +17,10 @@ const INDEX_KEY = "index";
 
 // Images never change once uploaded, so they can be cached hard.
 const IMAGE_CACHE = "public, max-age=31536000, immutable";
+
+// KV's hard ceiling on a single value is 25 MiB. The client downscales to
+// 1280px WebP long before this, so hitting it means the client failed to.
+const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 
 export default {
   async fetch(request, env) {
@@ -62,7 +67,10 @@ async function route(request, env) {
 /* ---------------------------------------------------------------- auth --- */
 
 async function authorised(request, env) {
-  const secret = env.SHARED_SECRET;
+  // Trimmed because the secret is set by pasting, and a stray newline or space
+  // is never a deliberate part of it. Without this a trailing "\n" from however
+  // it was piped in produces a length mismatch and a baffling 401.
+  const secret = (env.SHARED_SECRET || "").trim();
   if (!secret) return false;
 
   const header = request.headers.get("authorization") || "";
@@ -180,30 +188,35 @@ async function updateIndex(env, mutate) {
 /* -------------------------------------------------------------- images --- */
 
 async function getImage(env, id) {
-  const object = await env.IMAGES.get(id);
-  if (!object) return new Response("Not found", { status: 404 });
+  const { value, metadata } = await env.IMAGES.getWithMetadata(id, "arrayBuffer");
+  if (value === null) return json({ error: "not_found" }, 404);
 
-  return new Response(object.body, {
+  return new Response(value, {
     headers: {
-      "content-type": object.httpMetadata?.contentType || "application/octet-stream",
+      "content-type": (metadata && metadata.contentType) || "application/octet-stream",
       "cache-control": IMAGE_CACHE,
-      etag: object.httpEtag,
     },
   });
 }
 
 async function putImage(request, env, id) {
-  const contentType = request.headers.get("content-type") || "application/octet-stream";
+  const contentType = request.headers.get("content-type") || "";
   if (!contentType.startsWith("image/")) {
-    return json({ error: "not_an_image", detail: contentType }, 400);
+    return json({ error: "not_an_image", detail: contentType || "(none)" }, 400);
   }
 
-  // Images are immutable, so an existing object means this is a retry.
-  const existing = await env.IMAGES.head(id);
-  if (existing) return json({ id, existed: true });
+  // Images are immutable, so an existing key means this is a retry.
+  if ((await env.IMAGES.get(id, "stream")) !== null) return json({ id, existed: true });
 
-  await env.IMAGES.put(id, request.body, { httpMetadata: { contentType } });
-  return json({ id, existed: false });
+  // Buffer rather than stream: KV needs the length up front, and we have to
+  // check it against the value limit anyway.
+  const body = await request.arrayBuffer();
+  if (body.byteLength > IMAGE_MAX_BYTES) {
+    return json({ error: "too_large", bytes: body.byteLength, limit: IMAGE_MAX_BYTES }, 413);
+  }
+
+  await env.IMAGES.put(id, body, { metadata: { contentType } });
+  return json({ id, existed: false, bytes: body.byteLength });
 }
 
 /* --------------------------------------------------------------- plumb --- */

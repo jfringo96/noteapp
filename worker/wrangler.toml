@@ -6,12 +6,15 @@ compatibility_date = "2026-08-01"
 # Paste the id it prints in here.
 [[kv_namespaces]]
 binding = "BOARDS"
-id = "PASTE_KV_NAMESPACE_ID_HERE"
+id = "78f7c749273644f7ae0efe07de0d08ca"
 
-# Created with: wrangler r2 bucket create noteapp-images
-[[r2_buckets]]
+# Images live in KV rather than R2 — see NOTES.md. R2 requires a card on file
+# even on its free tier. A separate namespace from BOARDS so image traffic and
+# board traffic stay independent.
+# Created with: wrangler kv namespace create IMAGES
+[[kv_namespaces]]
 binding = "IMAGES"
-bucket_name = "noteapp-images"
+id = "f4f3f64785714b03b25b04c847bc6a5d"
 
 # SHARED_SECRET is not set here — it is a secret, not a variable.
 # Set it with: wrangler secret put SHARED_SECRET

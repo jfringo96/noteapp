@@ -43,8 +43,23 @@ lookup.
 Never inline. Cards carry `{ imageId, mime, naturalW, naturalH, alt }` — the
 intrinsic dimensions live on the card so layout never waits on a blob load.
 
+**Server-side images live in KV, not the R2 the spec names.** R2 requires a
+card on file even on its free tier, and we did not want to add one. KV is free,
+and a second namespace (`IMAGES`, separate from `BOARDS`) keeps the binding name
+and the code shape identical, so switching to R2 later is a small change.
+
+The limits KV imposes are comfortable here: 25 MiB per value against our ~200 KB
+images, and 1 GB free in total — roughly 5,000 images. Two consequences to know:
+
+- KV is eventually consistent, so an image uploaded on one device can 404 on the
+  other for up to about a minute. The uploading device has it in IndexedDB
+  already, so this only ever affects the *other* device immediately after an
+  upload. Phase 3 should retry rather than treat a 404 as permanent.
+- There is no delete route for images, matching the "never delete a blob during
+  a session" rule above.
+
 Blobs are stored as native `Blob`s in IndexedDB (no base64, so no 33% encoding
-tax and no string cloning) and in R2 on the server, fetched through
+tax and no string cloning) and in KV on the server, fetched through
 `URL.createObjectURL()` into an in-memory `Map<imageId, url>`. Object URLs are
 runtime state and stay out of `state`.
 
@@ -98,26 +113,34 @@ empty and reachability is unambiguous.
 `worker/` is the API. `spike/` is a throwaway page that exercises it; delete it
 once Phase 1 starts.
 
-### One-time setup
+### Deployed
+
+| | |
+|---|---|
+| Worker | `https://noteapp-api.photostoneman.workers.dev` |
+| Spike page | `https://noteapp-spike.pages.dev` |
+| KV `BOARDS` | `78f7c749273644f7ae0efe07de0d08ca` |
+| KV `IMAGES` | `f4f3f64785714b03b25b04c847bc6a5d` |
+
+The shared secret is a Worker secret named `SHARED_SECRET`. Rotate it with
+`wrangler secret put SHARED_SECRET` and re-paste on each device.
+
+### Redeploying
 
 ```sh
-cd worker
-npm install -g wrangler        # or npx wrangler ... below
-wrangler login
-
-wrangler kv namespace create BOARDS      # paste the printed id into wrangler.toml
-wrangler r2 bucket create noteapp-images
-
-# Generate a secret and keep a copy — you paste the same string into each device.
-wrangler secret put SHARED_SECRET
-
-wrangler deploy
+npx --prefix worker wrangler deploy --config worker/wrangler.toml
+npx --prefix worker wrangler pages deploy spike --project-name noteapp-spike
 ```
 
-Then deploy `spike/` to Cloudflare Pages (Workers & Pages → Create → Pages →
-connect this repo, build command empty, output directory `spike`). Hosting it
-rather than opening the file locally is deliberate — the phone has to reach it,
-and it proves the Pages deploy works now rather than at Phase 3.
+### Two traps hit during setup, recorded so they are not re-hit
+
+- **Piping a secret from PowerShell appends a newline**, which produced an
+  intermittent 401. Use `printf '%s'` from bash, and note the Worker now
+  `.trim()`s the secret defensively.
+- **Changing a secret does not restart live isolates.** Instances started before
+  the change keep serving the old value, so auth flaps between 200 and 401 until
+  they recycle. A `wrangler deploy` forces new isolates and settles it
+  immediately. This will look like a bug and is not one.
 
 ### What must pass before Phase 1
 

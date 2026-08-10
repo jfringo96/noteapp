@@ -45,8 +45,8 @@
 <h1>Phase 0 — sync spike</h1>
 <p class="sub">
   Throwaway. Proves the Worker deploys, auth works, a board round-trips between
-  devices, the 409 guard fires, and images survive R2. Delete this folder once
-  Phase 1 starts.
+  devices, the 409 guard fires, and images survive storage. Delete this folder
+  once Phase 1 starts.
 </p>
 
 <fieldset>
@@ -94,8 +94,10 @@ const out = $("out");
 const BOARD_ID = "b_spike";
 
 // Settings persist so the phone only needs pasting into once.
+const DEFAULTS = { base: "https://noteapp-api.photostoneman.workers.dev", secret: "" };
+
 for (const key of ["base", "secret"]) {
-  $(key).value = localStorage.getItem("spike." + key) || "";
+  $(key).value = localStorage.getItem("spike." + key) || DEFAULTS[key];
   $(key).addEventListener("input", () => localStorage.setItem("spike." + key, $(key).value.trim()));
 }
 
@@ -202,7 +204,7 @@ $("file").onchange = guard(async () => {
   const put = await call(`/image/${id}`, { method: "PUT", body: file, contentType: file.type });
   if (put.status !== 200) return log("PUT image", put.status, put.body);
 
-  // Fetch it back through the Worker to prove R2 and the auth header agree.
+  // Fetch it back through the Worker to prove storage and auth agree.
   const res = await fetch(`${base()}/image/${id}`, { headers: { authorization: "Bearer " + secret() } });
   const blob = await res.blob();
   $("preview").src = URL.createObjectURL(blob);
