@@ -198,6 +198,31 @@ all and the console mentions something being undefined, that's usually why.
 there's a version worth keeping. The installed copy and the dev copy read the
 same `Documents\Board App\` folder, so there is only ever one set of notes.
 
+### Controls moved off the cards into a left inspector
+
+Colour chips, the bullets/tick-boxes toggle and the board Picture button all
+started life on the cards. That put a row of tiny targets on top of the content,
+made the grips crowded, and left the controls hard to find.
+
+They now live in a rail down the left that changes with the selection, like
+Milanote's. The rail is always rendered, even when nothing is selected, so the
+canvas never shifts sideways under the pointer when you click something.
+
+The inspector is rebuilt wholesale on every selection change. That is fine here
+and nowhere else in the app: it is a handful of buttons, it holds no caret, and
+nothing in it is mid-gesture when the selection changes.
+
+The colour tool calls `render()` directly rather than going through the store's
+render hook, because dragging around the colour wheel fires continuously and
+rebuilding the chrome would rebuild the inspector the pointer is inside.
+
+### Selection rings go on the visible thing
+
+A board card is a small tile in a larger, mostly empty box. Ringing the box drew
+a rectangle around nothing and read as a bug. The ring goes on the thumbnail
+instead — except inside a column, where the row really is the visible object, so
+there it goes back on the card.
+
 ### A drag threshold is what makes whole-card dragging possible
 
 Pictures and boards drag from anywhere on the card. That only works because a

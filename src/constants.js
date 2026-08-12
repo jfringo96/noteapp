@@ -36,6 +36,15 @@ export const BACK_MAX = 50;
 /** Cards whose top bar can be tinted, for colour-coding a board. */
 export const ACCENTABLE = ["text", "list", "column"];
 
+/**
+ * Cards the inspector offers a colour for. Boards are here too, but they wear
+ * it on their thumbnail rather than a top bar — they haven't got one.
+ */
+export const COLOURABLE = ["text", "list", "column", "board"];
+
+/** Boards are a fixed-size tile, like Milanote. Nothing to drag bigger. */
+export const NO_RESIZE = ["board"];
+
 /** What the colour picker opens on before a card has been tinted. */
 export const ACCENT_DEFAULT = "#e8dfcc";
 
@@ -51,8 +60,8 @@ export const DEFAULT_SIZE = {
   text: { w: 260, h: 160 },
   list: { w: 240, h: 150 },
   image: { w: 280, h: 200 },
-  // Squarish: a thumbnail with two short lines of text under it.
-  board: { w: 150, h: 196 },
+  // A smallish tile: a square thumbnail with two short lines of text under it.
+  board: { w: 122, h: 158 },
   column: { w: 270, h: 340 },
 };
 

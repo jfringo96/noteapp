@@ -9,23 +9,7 @@
 import { applyChange, commitEdit, getCard, stashEdit, touch } from "../store.js";
 import { uid } from "../constants.js";
 
-export function buildGrip(card, el, rail) {
-  const toggle = document.createElement("button");
-  toggle.type = "button";
-  toggle.className = "card-grip-btn";
-  toggle.title = "Switch between bullets and checkboxes";
-  toggle.setAttribute("aria-label", "Switch between bullets and checkboxes");
-
-  toggle.addEventListener("click", () => {
-    applyChange(() => {
-      const target = getCard(card.id);
-      target.checkable = !target.checkable;
-    });
-  });
-
-  el.__listToggle = toggle;
-  rail.appendChild(toggle);
-}
+// Bullets vs tick boxes now lives in the left inspector, not on the card.
 
 export function build(card, el, body) {
   const rows = document.createElement("div");
@@ -39,7 +23,6 @@ export function build(card, el, body) {
 }
 
 export function update(card, el) {
-  if (el.__listToggle) el.__listToggle.textContent = card.checkable ? "☑" : "•";
   syncRows(card, el);
 }
 

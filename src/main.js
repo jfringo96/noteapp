@@ -36,6 +36,7 @@ import {
 } from "./canvas.js";
 
 import { resolveDrop, showDropFeedback } from "./drop.js";
+import { initInspector, refreshInspector } from "./inspector.js";
 
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
@@ -66,6 +67,7 @@ function updateChrome() {
 
   renderCrumbs();
   refreshSwitcher();
+  refreshInspector();
 }
 
 function renderCrumbs() {
@@ -118,6 +120,11 @@ setHooks({
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
 initSwitcher(switcherEl, $("boardsBtn"), setStatus);
+
+// `repaint` is the plain render, not the store hook: dragging around the colour
+// wheel fires continuously, and there is no need to rebuild the chrome — which
+// includes the inspector the pointer is currently inside — on every step.
+initInspector({ element: $("inspector"), repaint: render, status: setStatus });
 
 setDropHandlers({
   resolve: resolveDrop,

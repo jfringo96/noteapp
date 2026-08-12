@@ -290,10 +290,14 @@ much is inside under that. No card background of its own: it reads as an object
 sitting on the board, not as another sheet of paper.
 
 - **Double-click opens it.** Single click only selects.
-- Selecting reveals a **Picture** button on the thumbnail, which sets a cover
-  image for that board. The cover lives on the board, not on the card, so every
-  card pointing at it shows the same picture — exactly like the name.
+- Selecting it puts **Colour**, **Picture** and **No picture** in the inspector.
+  The cover lives on the board, not on the card, so every card pointing at it
+  shows the same picture — exactly like the name.
 - Once selected, the name is a text field. That's the rename gesture.
+- **Not resizable.** A board is a fixed tile.
+- Selecting it rings the *thumbnail*, not the card. A board card's box is mostly
+  empty space around a small tile, so outlining the box draws a rectangle around
+  nothing and reads as a bug.
 - Creating one makes the new empty board immediately — no dialog — and leaves
   you where you are with the name selected for typing.
 - Drag any card onto a board card to move it into that board.
@@ -308,6 +312,25 @@ will land. Resizes from the bottom-right like any other card.
 
 Columns hold anything except another column — boards included, which is the
 main reason to want them.
+
+---
+
+## The inspector
+
+A narrow rail down the left showing controls for whatever is selected, like
+Milanote's. It is always present — even with nothing selected — so the canvas
+never shifts sideways when you click something.
+
+| Selected | Offers |
+|---|---|
+| text | Colour |
+| list | Colour, Bullets / Tick boxes |
+| image | — |
+| board | Colour, Picture, No picture |
+| column | Colour, Collapse |
+
+Controls belong here rather than on the cards. A row of tiny targets sitting on
+top of the content makes cards fiddly and the controls hard to find.
 
 ---
 

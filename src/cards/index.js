@@ -13,8 +13,8 @@
  * a stack and its geometry belongs to the column.
  */
 
-import { ACCENTABLE, ACCENT_DEFAULT, isDarkColour } from "../constants.js";
-import { commitEdit, deleteCard, getCard, select, stashEdit, touch } from "../store.js";
+import { ACCENTABLE, NO_RESIZE, isDarkColour } from "../constants.js";
+import { deleteCard, select } from "../store.js";
 import { attachDrag, attachResize } from "../gestures.js";
 
 import * as text from "./text.js";
@@ -48,7 +48,8 @@ export function buildCard(card, scroller, options = {}) {
   rail.className = "card-grip-rail";
   grip.appendChild(rail);
 
-  if (ACCENTABLE.includes(card.type)) buildAccent(card, el, rail);
+  // The grip carries the delete button and nothing else. Colour, list style
+  // and board pictures all live in the left inspector now — see inspector.js.
   if (type && type.buildGrip) type.buildGrip(card, el, rail);
 
   const del = document.createElement("button");
@@ -85,8 +86,8 @@ export function buildCard(card, scroller, options = {}) {
   el.addEventListener("pointerdown", () => select(card.id));
 
   // Inside a column a card has no size of its own: it is as wide as the column
-  // and as tall as its content. Only canvas cards get a resize handle.
-  if (!inColumn) {
+  // and as tall as its content. Boards are a fixed tile. Neither gets a handle.
+  if (!inColumn && !NO_RESIZE.includes(card.type)) {
     const resize = document.createElement("div");
     resize.className = "card-resize";
     resize.title = "Drag to resize";
@@ -118,52 +119,13 @@ export function updateCard(el, card, index, selectedId) {
 
   el.classList.toggle("is-selected", card.id === selectedId);
 
-  if (ACCENTABLE.includes(card.type)) {
-    paintAccent(el, card.accent);
-    if (el.__accentPicker && document.activeElement !== el.__accentPicker) {
-      el.__accentPicker.value = card.accent || ACCENT_DEFAULT;
-    }
-  }
+  if (ACCENTABLE.includes(card.type)) paintAccent(el, card.accent);
 
   const type = TYPES[card.type];
   if (type && type.update) type.update(card, el);
 }
 
-/* ---------------------------------------------------------------- accent --- */
-
-/**
- * Tinting the top bar, for colour-coding a board by eye.
- *
- * A native colour input, for the same reason the old swatch card used one:
- * the OS picker is better than anything worth building here, and it costs one
- * element.
- */
-function buildAccent(card, el, rail) {
-  const picker = document.createElement("input");
-  picker.type = "color";
-  picker.className = "card-accent";
-  picker.value = card.accent || ACCENT_DEFAULT;
-  picker.title = "Change this card's colour";
-  picker.setAttribute("aria-label", "Card colour");
-
-  picker.addEventListener("input", () => {
-    const target = getCard(card.id);
-    if (!target) return;
-
-    stashEdit();
-    target.accent = picker.value;
-    paintAccent(el, picker.value);
-    touch();
-  });
-
-  // Dragging around the colour wheel fires input continuously; change fires
-  // once when the dialog is dismissed. That is the end of the editing session.
-  picker.addEventListener("change", commitEdit);
-
-  el.__accentPicker = picker;
-  rail.appendChild(picker);
-}
-
+/** Tinting the top bar, for colour-coding a board by eye. */
 function paintAccent(el, colour) {
   const grip = el.__grip;
   if (!grip) return;

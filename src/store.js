@@ -240,7 +240,10 @@ export function makeCard(type, x, y, extra) {
   // A board card holds ONLY the target id. Title and card count are read from
   // the target board on every render, so renaming a board updates every card
   // pointing at it for free, and nothing can drift out of sync.
-  if (type === "board") card.targetBoardId = null;
+  if (type === "board") {
+    card.targetBoardId = null;
+    card.accent = null;
+  }
 
   // A column owns its items outright — they are full cards living in this
   // array, not references. Nothing else on the board holds them.

@@ -13,9 +13,9 @@
  * CSS differs.
  */
 
-import { boardFace, renameBoard, setBoardCover } from "../boards.js";
+import { boardFace, renameBoard } from "../boards.js";
 import { navigateTo } from "../navigation.js";
-import { imageUrl, importImage } from "../images.js";
+import { imageUrl } from "../images.js";
 import { commitEdit, getCard, stashEdit, touch } from "../store.js";
 
 export function build(card, el, body) {
@@ -31,15 +31,9 @@ export function build(card, el, body) {
   cover.draggable = false;
   cover.hidden = true;
 
-  // Only reachable once the card is selected — see the CSS note below.
-  const pick = document.createElement("button");
-  pick.type = "button";
-  pick.className = "board-cover-btn";
-  pick.textContent = "Picture";
-  pick.title = "Choose a picture for this board";
-  pick.addEventListener("click", () => chooseCover(card.id));
-
-  thumb.append(cover, pick);
+  // Choosing the picture lives in the left inspector, not on the thumbnail —
+  // a button floating over the image was both ugly and easy to hit by mistake.
+  thumb.appendChild(cover);
 
   const text = document.createElement("div");
   text.className = "board-text";
@@ -88,6 +82,7 @@ export function build(card, el, body) {
   el.__boardName = name;
   el.__boardMeta = meta;
   el.__boardCover = cover;
+  el.__boardThumb = thumb;
 }
 
 export function update(card, el) {
@@ -112,6 +107,10 @@ export function update(card, el) {
   }
 
   el.__boardMeta.textContent = face.count === 1 ? "1 card" : `${face.count} cards`;
+
+  // A board wears its colour on the thumbnail — it hasn't got a top bar to
+  // tint. Only visible where a cover picture isn't covering it.
+  el.__boardThumb.style.background = card.accent || "";
 
   loadCover(face.cover, el);
 }
@@ -142,30 +141,9 @@ async function loadCover(cover, el) {
   el.__boardCover.hidden = false;
 }
 
-async function chooseCover(cardId) {
-  const card = getCard(cardId);
-  if (!card || !card.targetBoardId) return;
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
-
-    // Same pipeline as an image card: downscaled, re-encoded, written to disk.
-    const fields = await importImage(file);
-    if (fields) setBoardCover(card.targetBoardId, fields);
-  });
-
-  input.click();
-}
-
 /*
- * Whether the name and the Picture button are reachable is driven purely by the
- * `is-selected` class in CSS (`pointer-events: none` until selected), NOT by
- * anything set here.
+ * Whether the name is reachable is driven purely by the `is-selected` class in
+ * CSS (`pointer-events: none` until selected), NOT by anything set here.
  *
  * It has to be, because selection never re-renders — it only toggles that class
  * and the z-index. Anything decided in update() would go stale the moment you
