@@ -153,6 +153,12 @@ function buildPicker() {
         return;
       }
 
+      if (type === "link") {
+        addCard(type, x, y);
+        focusLinkTitle(getSelectedId());
+        return;
+      }
+
       addCard(type, x, y);
 
       if (type === "column") focusColumnTitle(getSelectedId());
@@ -295,4 +301,10 @@ export function focusCard(id) {
 export function focusColumnTitle(id) {
   const el = elements.get(id);
   if (el && el.__columnTitle) el.__columnTitle.focus();
+}
+
+/** A new link is useless until it has an address, so start there. */
+export function focusLinkTitle(id) {
+  const el = elements.get(id);
+  if (el && el.__linkUrl) el.__linkUrl.focus();
 }

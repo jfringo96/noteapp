@@ -216,6 +216,28 @@ The colour tool calls `render()` directly rather than going through the store's
 render hook, because dragging around the colour wheel fires continuously and
 rebuilding the chrome would rebuild the inspector the pointer is inside.
 
+### Link cards fetch nothing
+
+`SPEC.md` lists link preview cards that scrape metadata as a non-goal, and that
+survived the rewrite deliberately. A preview card means every link on every
+board reaches out to the internet, quietly, from a machine that otherwise never
+does — for a title you could type in two seconds.
+
+So a link card is a URL and a title you write. Opening one goes through the
+main process, which checks the scheme is `http:` or `https:` before handing it
+to the OS. Without that check a `file:` or a Windows shell scheme sitting in a
+`boards.json` would be enough to launch something.
+
+### Deleting a board is armed, not instant
+
+Two clicks in the inspector rather than a one-shot `×` on the card, because a
+board card is the only route back to everything inside it.
+
+Arming in place rather than opening a dialog keeps the no-modal rule the
+prototype established, and it disarms itself after a few seconds if you wander
+off. Note the message afterwards is honest about what happened: the *link* went,
+the board did not. Deleting never cascades.
+
 ### Selection rings go on the visible thing
 
 A board card is a small tile in a larger, mostly empty box. Ringing the box drew

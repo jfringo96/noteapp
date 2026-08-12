@@ -67,6 +67,25 @@ app.whenReady().then(async () => {
   ipcMain.handle("dataDir:path", () => storage.dataDir());
   ipcMain.handle("dataDir:reveal", () => shell.openPath(storage.dataDir()));
 
+  /**
+   * Opening a link hands a string from the page to the operating system, so
+   * the scheme is checked here rather than trusted. Without this, a `file:` or
+   * a Windows shell scheme in a board would be enough to launch something.
+   */
+  ipcMain.handle("shell:open", (_event, url) => {
+    let parsed;
+    try {
+      parsed = new URL(String(url));
+    } catch {
+      return false;
+    }
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+
+    shell.openExternal(parsed.href);
+    return true;
+  });
+
   createWindow();
 
   app.on("activate", () => {

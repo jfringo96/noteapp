@@ -10,19 +10,30 @@
  * empty when nothing is selected.
  */
 
-import { ACCENT_DEFAULT, COLOURABLE } from "./constants.js";
-import { applyChange, commitEdit, getCard, getSelectedId, stashEdit, touch } from "./store.js";
+import { ACCENT_DEFAULT, CARD_TYPES, COLOURABLE, TYPE_GLYPH, TYPE_LABEL } from "./constants.js";
+import {
+  applyChange,
+  commitEdit,
+  deleteCard,
+  getCard,
+  getSelectedId,
+  stashEdit,
+  touch,
+} from "./store.js";
 import { setBoardCover } from "./boards.js";
 import { importImage } from "./images.js";
+import { openLink } from "./cards/link.js";
 
 let panel = null;
 let repaint = () => {};
 let onStatus = () => {};
+let onAdd = () => {};
 
-export function initInspector({ element, repaint: repaintFn, status }) {
+export function initInspector({ element, repaint: repaintFn, status, add }) {
   panel = element;
   repaint = repaintFn || (() => {});
   onStatus = status || (() => {});
+  onAdd = add || (() => {});
 }
 
 export function refreshInspector() {
@@ -35,10 +46,19 @@ export function refreshInspector() {
   // caret, and nothing in it is mid-gesture when the selection changes.
   panel.replaceChildren();
   panel.classList.toggle("is-empty", !card);
-  if (!card) return;
+
+  // With nothing selected the rail is where you pick what to add, like
+  // Milanote's. It is the same rail either way, so the canvas never shifts.
+  if (!card) {
+    for (const type of CARD_TYPES) {
+      panel.appendChild(tool(TYPE_LABEL[type], TYPE_GLYPH[type], () => onAdd(type)));
+    }
+    return;
+  }
 
   if (COLOURABLE.includes(card.type)) panel.appendChild(colourTool(card));
   if (card.type === "list") panel.appendChild(listStyleTool(card));
+  if (card.type === "link") panel.appendChild(openLinkTool(card));
 
   if (card.type === "board") {
     panel.appendChild(pictureTool(card));
@@ -46,6 +66,9 @@ export function refreshInspector() {
   }
 
   if (card.type === "column") panel.appendChild(collapseTool(card));
+
+  // Boards have no delete button of their own — see deleteTool.
+  if (card.type === "board") panel.appendChild(deleteTool(card));
 }
 
 /* ----------------------------------------------------------------- tools --- */
@@ -150,6 +173,55 @@ function clearPictureTool(card) {
     const target = getCard(card.id);
     if (target && target.targetBoardId) setBoardCover(target.targetBoardId, null);
   });
+}
+
+function openLinkTool(card) {
+  return tool("Open", "↗", async () => {
+    const target = getCard(card.id);
+    if (!target) return;
+    if (!(await openLink(target))) onStatus("That doesn't look like a web address.");
+  });
+}
+
+/**
+ * Deleting a board takes two clicks: the first arms it, the second does it.
+ *
+ * A board card is the only way back to everything inside it, so a stray click
+ * on a one-shot × is expensive in a way it isn't for a note. Arming in place
+ * rather than opening a dialog keeps the no-modal rule — and it disarms itself
+ * if you wander off.
+ */
+function deleteTool(card) {
+  let armed = false;
+  let timer = null;
+
+  const button = tool("Delete", "×", () => {
+    const label = button.querySelector(".tool-label");
+
+    if (!armed) {
+      armed = true;
+      button.classList.add("is-armed");
+      label.textContent = "Sure?";
+
+      timer = setTimeout(() => {
+        armed = false;
+        button.classList.remove("is-armed");
+        label.textContent = "Delete";
+      }, 4000);
+
+      return;
+    }
+
+    clearTimeout(timer);
+    deleteCard(card.id);
+
+    // Worth saying, because it is not what people expect: deleting the card
+    // removes the link, not the board. Deleting never cascades.
+    onStatus("Link removed — the board itself is still under Boards.");
+  });
+
+  button.classList.add("tool-danger");
+  return button;
 }
 
 function collapseTool(card) {

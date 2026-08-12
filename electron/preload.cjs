@@ -17,4 +17,5 @@ contextBridge.exposeInMainWorld("api", {
   sweepImages: (keep) => ipcRenderer.invoke("image:sweep", keep),
   dataDir: () => ipcRenderer.invoke("dataDir:path"),
   revealDataFolder: () => ipcRenderer.invoke("dataDir:reveal"),
+  openExternal: (url) => ipcRenderer.invoke("shell:open", url),
 });

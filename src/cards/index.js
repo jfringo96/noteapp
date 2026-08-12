@@ -20,10 +20,11 @@ import { attachDrag, attachResize } from "../gestures.js";
 import * as text from "./text.js";
 import * as list from "./list.js";
 import * as image from "./image.js";
+import * as link from "./link.js";
 import * as board from "./board.js";
 import * as column from "./column.js";
 
-const TYPES = { text, list, image, board, column };
+const TYPES = { text, list, image, link, board, column };
 
 // Columns render their contents with the same builder that renders the canvas.
 // Injected rather than imported, because column.js is imported here — a plain

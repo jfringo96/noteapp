@@ -28,6 +28,7 @@ import {
   createBoardCard,
   focusCard,
   focusColumnTitle,
+  focusLinkTitle,
   hidePicker,
   initCanvas,
   refreshStacking,
@@ -124,7 +125,7 @@ initSwitcher(switcherEl, $("boardsBtn"), setStatus);
 // `repaint` is the plain render, not the store hook: dragging around the colour
 // wheel fires continuously, and there is no need to rebuild the chrome — which
 // includes the inspector the pointer is currently inside — on every step.
-initInspector({ element: $("inspector"), repaint: render, status: setStatus });
+initInspector({ element: $("inspector"), repaint: render, status: setStatus, add: addAtCentre });
 
 setDropHandlers({
   resolve: resolveDrop,
@@ -159,34 +160,33 @@ if (loadResult === "loaded") sweepImages(state).catch(() => {});
 
 /* --------------------------------------------------------------- toolbar --- */
 
-function addFromToolbar(type) {
+/** Adding a card of any type, in the middle of what you can see. */
+function addAtCentre(type) {
   const point = viewportCentre(type);
+
+  if (type === "board") {
+    createBoardCard(point.x, point.y);
+    return;
+  }
+
+  if (type === "image") {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+    input.addEventListener("change", () =>
+      addImageFiles(imageFilesFrom(input.files), point.x, point.y)
+    );
+    input.click();
+    return;
+  }
+
   addCard(type, point.x, point.y);
 
   if (type === "column") focusColumnTitle(getSelectedId());
+  else if (type === "link") focusLinkTitle(getSelectedId());
   else focusCard(getSelectedId());
 }
-
-$("addText").addEventListener("click", () => addFromToolbar("text"));
-$("addList").addEventListener("click", () => addFromToolbar("list"));
-$("addColumn").addEventListener("click", () => addFromToolbar("column"));
-
-$("addBoard").addEventListener("click", () => {
-  const point = viewportCentre("board");
-  createBoardCard(point.x, point.y);
-});
-
-$("addImage").addEventListener("click", () => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.multiple = true;
-  input.addEventListener("change", () => {
-    const point = viewportCentre("image");
-    addImageFiles(imageFilesFrom(input.files), point.x, point.y);
-  });
-  input.click();
-});
 
 undoBtn.addEventListener("click", () => undo());
 redoBtn.addEventListener("click", () => redo());

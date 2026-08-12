@@ -112,7 +112,7 @@ and a push.
 // Card — common fields
 {
   id: "c_abc123",
-  type: "text" | "list" | "image" | "board",
+  type: "text" | "list" | "image" | "link" | "board" | "column",
   x: 400, y: 220,            // top-left, canvas coordinates
   w: 240, h: 160,
   // ...type-specific fields below
@@ -131,8 +131,11 @@ and a push.
 // type: "image"
 { imageId: "img_xyz", mime: "image/webp", naturalW: 1280, naturalH: 853, alt: "" }
 
+// type: "link"
+{ url: "", title: "", accent: null }
+
 // type: "board"
-{ targetBoardId: "b_trip2026" }
+{ targetBoardId: "b_trip2026", accent: null }
 
 // type: "column"
 {
@@ -281,6 +284,11 @@ it. Backspace on an empty row deletes it and focuses the row above, cursor at
 end. A per-card toggle switches between bullets and checkboxes; checked rows get
 strikethrough.
 
+**link** — a web address with a title I write myself. Double-click opens it in
+the real browser. **Not a preview card**: nothing is fetched, ever. Scraping a
+page for a title and a thumbnail would mean every link on every board quietly
+reaching out to the internet from a machine that otherwise never does.
+
 **image** — the photograph and nothing else. No paper, no frame, no letterbox
 fill. The grip floats over the top edge rather than taking a strip out of the
 card, and appears on hover or selection.
@@ -317,17 +325,30 @@ main reason to want them.
 
 ## The inspector
 
-A narrow rail down the left showing controls for whatever is selected, like
-Milanote's. It is always present — even with nothing selected — so the canvas
-never shifts sideways when you click something.
+A narrow rail down the left, like Milanote's. It is always present, so the
+canvas never shifts sideways when you click something.
+
+**With nothing selected it is the palette** — one button per card type, adding
+into the middle of the view.
+
+**With something selected it shows that card's controls:**
 
 | Selected | Offers |
 |---|---|
 | text | Colour |
 | list | Colour, Bullets / Tick boxes |
 | image | — |
-| board | Colour, Picture, No picture |
+| link | Colour, Open |
+| board | Colour, Picture, No picture, Delete |
 | column | Colour, Collapse |
+
+Deleting a board takes two clicks — the first arms it, the second does it, and
+it disarms itself if you wander off. A board card is the only way back to
+everything inside it, so a stray click on a one-shot `×` costs more there than
+on a note. Board cards therefore have no `×` of their own.
+
+(Deleting the card removes the *link*. The board itself survives and is still
+reachable from the Boards list — deleting never cascades.)
 
 Controls belong here rather than on the cards. A row of tiny targets sitting on
 top of the content makes cards fiddly and the controls hard to find.
