@@ -30,7 +30,34 @@ export let state = emptyDoc();
 
 export const currentBoard = () => state.boards[state.currentBoardId];
 
-export const getCard = (id) => currentBoard().cards.find((c) => c.id === id) || null;
+/**
+ * Where a card lives. Cards sit either directly on the board or inside a
+ * column's `items`, and only ever in one of them — a column owns its items
+ * outright rather than referencing them.
+ *
+ * Always call this fresh inside a mutator: `applyChange` clones the whole
+ * state, so any list captured beforehand belongs to the old object.
+ */
+export function findCardEntry(id, board = currentBoard()) {
+  const top = board.cards.findIndex((c) => c.id === id);
+  if (top >= 0) return { list: board.cards, index: top, columnId: null };
+
+  for (const card of board.cards) {
+    if (card.type !== "column") continue;
+    const inner = card.items.findIndex((c) => c.id === id);
+    if (inner >= 0) return { list: card.items, index: inner, columnId: card.id };
+  }
+
+  return null;
+}
+
+export function getCard(id) {
+  const entry = findCardEntry(id);
+  return entry ? entry.list[entry.index] : null;
+}
+
+/** Only cards sitting directly on the board — not column contents. */
+export const getTopLevelCard = (id) => currentBoard().cards.find((c) => c.id === id) || null;
 
 /* ------------------------------------------------------------------------ */
 /* Not part of the document.                                                 */
@@ -176,6 +203,9 @@ export function select(id) {
   if (selectedId === id) return;
   selectedId = id;
 
+  // Bring to front, but only for cards on the board itself. A card inside a
+  // column has no z-order — reordering there would silently move it up the
+  // column, which is a real edit and not what selecting something means.
   if (id) {
     const cards = currentBoard().cards;
     const i = cards.findIndex((c) => c.id === id);
@@ -212,6 +242,15 @@ export function makeCard(type, x, y, extra) {
   // pointing at it for free, and nothing can drift out of sync.
   if (type === "board") card.targetBoardId = null;
 
+  // A column owns its items outright — they are full cards living in this
+  // array, not references. Nothing else on the board holds them.
+  if (type === "column") {
+    card.title = "";
+    card.items = [];
+    card.collapsed = false;
+    card.accent = null;
+  }
+
   // Applied last, so an imported image can bring its own size and dimensions.
   if (extra) Object.assign(card, extra);
 
@@ -227,9 +266,12 @@ export function addCard(type, x, y, extra) {
 
 export function deleteCard(id) {
   if (!getCard(id)) return;
+
   applyChange(() => {
-    const cards = currentBoard().cards;
-    cards.splice(cards.findIndex((c) => c.id === id), 1);
+    // Re-found inside the mutator: the entry above points into the state
+    // object that applyChange has just cloned away.
+    const entry = findCardEntry(id);
+    if (entry) entry.list.splice(entry.index, 1);
   });
   if (selectedId === id) {
     selectedId = null;

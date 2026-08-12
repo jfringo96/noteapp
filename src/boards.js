@@ -47,33 +47,6 @@ export function renameBoard(id, title) {
   if (board) board.title = title;
 }
 
-/**
- * Moves a card to another board. A splice and a push, because no card is ever
- * owned by more than one board's array.
- *
- * The card keeps its x/y, so it can land overlapping something already there.
- * No auto-placement — guessing where you meant it to go would be worse.
- */
-export function moveCardToBoard(cardId, targetBoardId) {
-  const target = state.boards[targetBoardId];
-  if (!target) return false;
-
-  const cards = currentBoard().cards;
-  const index = cards.findIndex((c) => c.id === cardId);
-  if (index < 0) return false;
-
-  applyChange(() => {
-    const from = currentBoard().cards;
-    const [card] = from.splice(
-      from.findIndex((c) => c.id === cardId),
-      1
-    );
-    state.boards[targetBoardId].cards.push(card);
-  });
-
-  return true;
-}
-
 /** Every board, for the switcher. Current board first, then alphabetical. */
 export function boardSummaries() {
   return Object.values(state.boards)
@@ -89,11 +62,20 @@ export function boardSummaries() {
  * What a board card should show. Returns null when the target is missing, so
  * the card can render as broken rather than throwing — an unresolvable
  * `targetBoardId` must always render.
+ *
+ * The count includes cards inside columns, because that is what "how much is
+ * in there" means to someone looking at the card.
  */
 export function boardFace(targetBoardId) {
   const board = state.boards[targetBoardId];
   if (!board) return null;
-  return { title: board.title, count: board.cards.length };
+
+  const count = board.cards.reduce(
+    (total, card) => total + (card.type === "column" ? card.items.length : 1),
+    0
+  );
+
+  return { title: board.title, count };
 }
 
 /** Adds a board card and the board it points at, in one history entry. */

@@ -30,6 +30,12 @@ export function build(card, el, body) {
 export function update(card, el) {
   if (el.__img) el.__img.alt = card.alt || "";
 
+  // In a column the width is the column's, so the height has to come from the
+  // image's own proportions rather than from card.h.
+  if (el.__inColumn && card.naturalW && card.naturalH) {
+    el.style.aspectRatio = `${card.naturalW} / ${card.naturalH}`;
+  }
+
   // Undo can swap which image this card points at, so reload when it changes.
   if (el.__loadedFor !== card.imageId) load(card, el);
 }

@@ -132,7 +132,23 @@ and a push.
 
 // type: "board"
 { targetBoardId: "b_trip2026" }
+
+// type: "column"
+{
+  title: "",
+  items: [ /* Cards — never another column */ ],
+  collapsed: false,
+  accent: null
+}
 ```
+
+**A column owns its items outright** — they are full cards living in its
+`items` array, not references. A card is therefore in exactly one place: loose
+on the board, or inside one column. Moving it is a splice out and a splice in.
+
+**Columns never contain columns.** One level of nesting, no recursion. This is
+Milanote's own rule, and it is what keeps lookup, layout and dragging
+tractable. Boards inside columns are fine and are the point.
 
 **Images are never embedded in `boards.json`.** They are files in `images/`,
 referenced by `imageId`. The intrinsic dimensions live on the card so layout
@@ -272,6 +288,14 @@ selected, the name becomes a text field and swallows the click.
 
 Drag any card onto a board card to move it into that board.
 
+**column** — a titled stack of other cards, with a permanent card count and a
+collapse toggle. Drag cards in from the canvas, drag them up and down inside it
+to reorder, and drag them back out onto the canvas. A line shows where a card
+will land. Resizes from the bottom-right like any other card.
+
+Columns hold anything except another column — boards included, which is the
+main reason to want them.
+
 ---
 
 ## Navigation
@@ -322,8 +346,8 @@ import. Tinting for text and list cards.
 
 **Phase 3 — gallery export.** The self-contained HTML file. Export/Import JSON.
 
-**Phase 4 — nested boards.** Board cards, breadcrumbs, back, board switcher,
-moving cards between boards.
+**Phase 4 — nested boards and columns.** Board cards, breadcrumbs, back, board
+switcher, moving cards between boards. Columns.
 
 **Phase 5 — polish and packaging.** Keyboard shortcuts, empty states, the
 installer, whatever's annoying by then.

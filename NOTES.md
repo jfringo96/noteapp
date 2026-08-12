@@ -108,6 +108,31 @@ Image cards lost their frame at the same time: no paper, no letterbox fill, and
 the grip floats over the top edge on hover instead of taking a strip out of the
 card. An image card is now the photograph and nothing else.
 
+### Columns own their items; boards reference theirs
+
+Two kinds of containment in the same app, deliberately different.
+
+A **board** card holds only a `targetBoardId`. Boards are a flat map, so one
+board can be linked from several places and two can point at each other.
+
+A **column** holds full cards in its `items` array. It owns them outright.
+
+The alternative — keeping every card in `board.cards` with a `parentColumnId` —
+was rejected. Cards in a column have no meaningful x/y, so a flat list would
+carry two kinds of card that obey different layout rules, and every render
+would have to filter and re-sort. Ownership makes the containment visible in
+`boards.json` and makes each move a splice out and a splice in.
+
+The cost is that a card now lives in one of two places, so `getCard` has to
+look in both. `findCardEntry()` in `store.js` is the single place that knows
+this, and it returns the list and index so callers can splice without
+re-deriving it. **Always call it fresh inside a mutator** — `applyChange`
+clones the whole state, so an entry found beforehand points into the old
+object.
+
+**Columns never contain columns.** Milanote's own rule, and it is what keeps
+this bounded: one level, no recursion, no cycle detection.
+
 ### Creating a board doesn't navigate into it
 
 `SPEC.md` originally said creating a board navigates to it, inherited from the
@@ -173,6 +198,20 @@ all and the console mentions something being undefined, that's usually why.
 there's a version worth keeping. The installed copy and the dev copy read the
 same `Documents\Board App\` folder, so there is only ever one set of notes.
 
+### Dragging has two visual modes
+
+A card on the canvas is moved with `transform: translate()` from (0,0), which
+is what stops it jumping when you grab it.
+
+A card inside a column can't use that — the column clips it. So it is lifted to
+`position: fixed` with its size frozen first, and flown under the pointer.
+Both modes hit-test the same way and resolve to the same destination
+descriptor, so `move.js` doesn't know or care which happened.
+
+Reorder positions are read from **DOM order**, not from the element map. The
+map keeps insertion order, which stops matching what you see the first time
+anything is reordered — and reordering is the entire feature.
+
 ## Deferred
 
 - **Confirmation on destructive actions** (handoff §5.5). Undo is one keystroke,
@@ -186,6 +225,11 @@ same `Documents\Board App\` folder, so there is only ever one set of notes.
 - **List rows clip long text** rather than wrapping — they're single-line
   inputs, as specified (handoff open question 5).
 - **Auto-update.** Needs somewhere to host updates. Add only if wanted.
+- **Board cards inside a column are not drop targets.** The hit-test only walks
+  top-level cards, so you cannot drag a card onto a board that is sitting in a
+  column. Drag it out first.
+- **No "group these into a column"** gesture. Milanote has one; make a column
+  and drag things in for now.
 - **Clearing a card's tint** back to the default. Right now you pick a pale
   colour instead. Fine until it isn't.
 - **The card-type picker on double-click.** `SPEC.md` asks for a small picker at

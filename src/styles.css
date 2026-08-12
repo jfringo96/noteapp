@@ -537,6 +537,103 @@ html, body {
 .card-board.is-broken .board-name { color: #9a6a6a; }
 .card-board.is-broken .board-meta { color: #b08a8a; }
 
+/* ------------------------------------------------------------ column cards */
+
+.card-column { background: #f4eee0; }
+
+.card-column.is-drop-target { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
+
+.column-head {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex: 0 0 auto;
+  padding: .4rem .55rem .35rem;
+}
+
+.column-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  text-overflow: ellipsis;
+}
+
+.column-title:focus { outline: none; }
+.column-title::placeholder { color: #b9b09e; font-weight: 400; }
+
+/* Milanote keeps this label permanently, and it earns its place — it is how
+   you read a collapsed column. */
+.column-count { flex: 0 0 auto; font-size: .6875rem; color: var(--muted); white-space: nowrap; }
+
+.column-items {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  padding: 0 .45rem .5rem;
+}
+
+.column-line {
+  position: absolute;
+  left: .45rem;
+  right: .45rem;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.column-line[hidden] { display: none; }
+
+.card-column.is-collapsed { height: auto !important; }
+.card-column.is-collapsed .column-items { display: none; }
+
+/* --------------------------------------------------- cards inside a column */
+
+/*
+ * In a column a card is a row in a stack: the column owns the width, and the
+ * height comes from the content. So everything that positions or sizes a card
+ * on the canvas has to be switched off.
+ */
+.card.is-in-column {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  z-index: auto;
+  flex: 0 0 auto;
+  box-shadow: 0 1px 2px rgb(60 45 20 / 0.14);
+}
+
+.card.is-in-column .card-text-input { overflow: hidden; }
+.card.is-in-column .list-rows { overflow: visible; }
+.card.is-in-column .card-body { min-height: 0; }
+
+/* An image card in a column takes its height from the picture's proportions —
+   the aspect-ratio is set on the element in image.js — because the column has
+   already decided the width and card.h no longer applies. */
+.card.is-in-column.card-image { background: none; }
+
+/* Lifted out of the flow and flown under the pointer. Fixed rather than
+   transformed, because a transform would be clipped by the column. */
+.card.is-lifted {
+  position: fixed;
+  z-index: 900;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgb(60 45 20 / 0.22), 0 16px 32px rgb(60 45 20 / 0.22);
+}
+
 /* ------------------------------------------------------------ resize handle */
 
 .card-resize {

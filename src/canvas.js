@@ -9,9 +9,10 @@
  */
 
 import { CANVAS_SIZE, CARD_TYPES, DEFAULT_SIZE, TYPE_LABEL, clamp } from "./constants.js";
-import { addCard, currentBoard, getSelectedId, select, state } from "./store.js";
+import { addCard, currentBoard, getSelectedId, select } from "./store.js";
 import { addBoardCard } from "./boards.js";
 import { buildCard, updateCard } from "./cards/index.js";
+import { initDrop } from "./drop.js";
 import { imageFilesFrom, importImage } from "./images.js";
 
 const elements = new Map();
@@ -35,6 +36,11 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
   canvas.style.height = CANVAS_SIZE + "px";
 
   buildPicker();
+
+  // The drop logic needs to look elements up and convert screen coordinates,
+  // both of which live here. Injected rather than imported, to keep drop.js
+  // from depending on the whole canvas.
+  initDrop({ elements: (id) => elements.get(id) || null, canvasPoint });
 
   canvas.addEventListener("pointerdown", (event) => {
     if (event.target !== canvas) return;
@@ -110,8 +116,18 @@ export function refreshStacking() {
   currentBoard().cards.forEach((card, index) => {
     const el = elements.get(card.id);
     if (!el) return;
+
     el.style.zIndex = String(index + 1);
     el.classList.toggle("is-selected", card.id === selectedId);
+
+    // Cards inside a column live in the column's own element map, not this
+    // one, so they have to be reached separately or selecting one would show
+    // nothing until the next full render.
+    if (card.type === "column" && el.__itemEls) {
+      for (const [id, itemEl] of el.__itemEls) {
+        itemEl.classList.toggle("is-selected", id === selectedId);
+      }
+    }
   });
 }
 
@@ -138,7 +154,9 @@ function buildPicker() {
       }
 
       addCard(type, x, y);
-      focusCard(getSelectedId());
+
+      if (type === "column") focusColumnTitle(getSelectedId());
+      else focusCard(getSelectedId());
     });
 
     picker.appendChild(button);
@@ -247,40 +265,6 @@ export function createBoardCard(x, y) {
   el.__boardName.select();
 }
 
-/**
- * The board card under a point, front-to-back so the topmost one wins.
- *
- * A board card is never its own drop target, and nor is one pointing back at
- * the board you are already standing on — moving a card to where it already is
- * would be a no-op that looked like it worked.
- */
-export function boardCardUnder(clientX, clientY, excludeCardId) {
-  const cards = currentBoard().cards;
-
-  for (let i = cards.length - 1; i >= 0; i--) {
-    const card = cards[i];
-
-    if (card.type !== "board" || card.id === excludeCardId) continue;
-    if (!card.targetBoardId || card.targetBoardId === state.currentBoardId) continue;
-    if (!state.boards[card.targetBoardId]) continue;
-
-    const el = elements.get(card.id);
-    if (!el) continue;
-
-    const box = el.getBoundingClientRect();
-    if (clientX >= box.left && clientX <= box.right && clientY >= box.top && clientY <= box.bottom) {
-      return el;
-    }
-  }
-
-  return null;
-}
-
-/** The board a drop-target element points at. */
-export function targetBoardOf(el) {
-  const card = currentBoard().cards.find((c) => c.id === el.dataset.id);
-  return card ? card.targetBoardId : null;
-}
 
 /* ----------------------------------------------------------------- utils --- */
 
@@ -305,4 +289,10 @@ export function focusCard(id) {
 
   const field = el.__textarea || (el.__rowEls && el.__rowEls.values().next().value?.__input);
   if (field) field.focus();
+}
+
+/** A new column wants its title typed straight away. */
+export function focusColumnTitle(id) {
+  const el = elements.get(id);
+  if (el && el.__columnTitle) el.__columnTitle.focus();
 }

@@ -40,16 +40,31 @@ export function update(card, el) {
   if (document.activeElement !== textarea && textarea.value !== card.text) {
     textarea.value = card.text;
   }
+
+  if (el.__inColumn) fitToContent(textarea);
 }
 
 /**
- * Cards grow to fit their content but never shrink, so a height set by dragging
- * the resize handle is respected.
+ * On the canvas, cards grow to fit their content but never shrink, so a height
+ * set by dragging the resize handle is respected.
+ *
+ * Inside a column there is no such height to respect — the column owns the
+ * layout — so the field simply tracks its content in both directions.
  */
 function grow(card, el, textarea) {
+  if (el.__inColumn) {
+    fitToContent(textarea);
+    return;
+  }
+
   const overflow = textarea.scrollHeight - textarea.clientHeight;
   if (overflow <= 0) return;
 
   card.h += overflow;
   el.style.height = card.h + "px";
+}
+
+function fitToContent(textarea) {
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
 }

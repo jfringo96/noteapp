@@ -12,21 +12,29 @@ export const IMAGE_QUALITY = 0.8;
 /** How large a newly imported image card is on the canvas, longest edge. */
 export const IMAGE_CARD_EDGE = 300;
 
-export const CARD_TYPES = ["text", "list", "image", "board"];
+export const CARD_TYPES = ["text", "list", "image", "board", "column"];
 
 export const TYPE_LABEL = {
   text: "Text",
   list: "List",
   image: "Image",
   board: "Board",
+  column: "Column",
 };
+
+/**
+ * Columns hold cards — including boards — but never another column.
+ * One level of nesting, no recursion. This is Milanote's rule and it is what
+ * keeps drag, layout and lookup tractable.
+ */
+export const COLUMNABLE = ["text", "list", "image", "board"];
 
 /** Breadcrumbs are capped so a cycle of boards can't grow them forever. */
 export const TRAIL_MAX = 10;
 export const BACK_MAX = 50;
 
 /** Cards whose top bar can be tinted, for colour-coding a board. */
-export const ACCENTABLE = ["text", "list"];
+export const ACCENTABLE = ["text", "list", "column"];
 
 /** What the colour picker opens on before a card has been tinted. */
 export const ACCENT_DEFAULT = "#e8dfcc";
@@ -36,6 +44,7 @@ export const MIN_SIZE = {
   list: { w: 160, h: 62 },
   image: { w: 90, h: 70 },
   board: { w: 150, h: 74 },
+  column: { w: 200, h: 140 },
 };
 
 export const DEFAULT_SIZE = {
@@ -43,6 +52,7 @@ export const DEFAULT_SIZE = {
   list: { w: 240, h: 150 },
   image: { w: 280, h: 200 },
   board: { w: 210, h: 92 },
+  column: { w: 270, h: 340 },
 };
 
 export const uid = (prefix) => prefix + "_" + Math.random().toString(36).slice(2, 9);

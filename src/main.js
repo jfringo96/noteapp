@@ -19,22 +19,23 @@ import {
   undo,
 } from "./store.js";
 
-import { moveCardToBoard } from "./boards.js";
+import { moveCard } from "./move.js";
 import { hide as hideSwitcher, initSwitcher, refresh as refreshSwitcher } from "./switcher.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
 
 import {
   addImageFiles,
-  boardCardUnder,
   createBoardCard,
   focusCard,
+  focusColumnTitle,
   hidePicker,
   initCanvas,
   refreshStacking,
   render,
-  targetBoardOf,
   viewportCentre,
 } from "./canvas.js";
+
+import { resolveDrop, showDropFeedback } from "./drop.js";
 
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
@@ -119,11 +120,17 @@ initPersistence(setStatus);
 initSwitcher(switcherEl, $("boardsBtn"), setStatus);
 
 setDropHandlers({
-  find: boardCardUnder,
-  drop: (cardId, targetEl) => {
-    const boardId = targetBoardOf(targetEl);
-    if (!boardId || !moveCardToBoard(cardId, boardId)) return false;
-    setStatus(`Moved to ${state.boards[boardId].title} — Ctrl+Z to undo`);
+  resolve: resolveDrop,
+  feedback: showDropFeedback,
+  commit: (cardId, destination) => {
+    if (!moveCard(cardId, destination)) return false;
+
+    // Moving to another board takes the card off-screen, so say where it went.
+    // Moves within this board are visible and need no commentary.
+    if (destination.kind === "board") {
+      setStatus(`Moved to ${state.boards[destination.boardId].title} — Ctrl+Z to undo`);
+    }
+
     return true;
   },
 });
@@ -148,11 +155,14 @@ if (loadResult === "loaded") sweepImages(state).catch(() => {});
 function addFromToolbar(type) {
   const point = viewportCentre(type);
   addCard(type, point.x, point.y);
-  focusCard(getSelectedId());
+
+  if (type === "column") focusColumnTitle(getSelectedId());
+  else focusCard(getSelectedId());
 }
 
 $("addText").addEventListener("click", () => addFromToolbar("text"));
 $("addList").addEventListener("click", () => addFromToolbar("list"));
+$("addColumn").addEventListener("click", () => addFromToolbar("column"));
 
 $("addBoard").addEventListener("click", () => {
   const point = viewportCentre("board");
