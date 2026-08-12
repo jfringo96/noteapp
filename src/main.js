@@ -26,9 +26,7 @@ import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail }
 import {
   addImageFiles,
   createBoardCard,
-  focusCard,
-  focusColumnTitle,
-  focusLinkTitle,
+  focusNewCard,
   hidePicker,
   initCanvas,
   refreshStacking,
@@ -182,10 +180,7 @@ function addAtCentre(type) {
   }
 
   addCard(type, point.x, point.y);
-
-  if (type === "column") focusColumnTitle(getSelectedId());
-  else if (type === "link") focusLinkTitle(getSelectedId());
-  else focusCard(getSelectedId());
+  focusNewCard(type, getSelectedId());
 }
 
 undoBtn.addEventListener("click", () => undo());

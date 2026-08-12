@@ -134,6 +134,9 @@ and a push.
 // type: "link"
 { url: "", title: "", accent: null }
 
+// type: "place"
+{ query: "", label: "", accent: null }
+
 // type: "board"
 { targetBoardId: "b_trip2026", accent: null }
 
@@ -289,6 +292,16 @@ the real browser. **Not a preview card**: nothing is fetched, ever. Scraping a
 page for a title and a thumbnail would mean every link on every board quietly
 reaching out to the internet from a machine that otherwise never does.
 
+**place** — somewhere on a map. Double-click opens it in the browser.
+
+Type a place name, a postcode, a `lat,lng` pair, or paste a Google Maps link
+straight in. A pasted link opens as-is; anything else becomes a Maps search.
+
+**No API key, no signup, no map tiles, no network from the app.** The card holds
+text; opening it builds a URL and hands it to the browser. Anything more —
+embedded tiles, geocoding, static map images — needs an account with a mapping
+provider, and isn't worth that.
+
 **image** — the photograph and nothing else. No paper, no frame, no letterbox
 fill. The grip floats over the top edge rather than taking a strip out of the
 card, and appears on hover or selection.
@@ -339,6 +352,7 @@ into the middle of the view.
 | list | Colour, Bullets / Tick boxes |
 | image | — |
 | link | Colour, Open |
+| place | Colour, Map |
 | board | Colour, Picture, No picture, Delete |
 | column | Colour, Collapse |
 

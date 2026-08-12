@@ -12,13 +12,14 @@ export const IMAGE_QUALITY = 0.8;
 /** How large a newly imported image card is on the canvas, longest edge. */
 export const IMAGE_CARD_EDGE = 300;
 
-export const CARD_TYPES = ["text", "list", "image", "link", "board", "column"];
+export const CARD_TYPES = ["text", "list", "image", "link", "place", "board", "column"];
 
 export const TYPE_LABEL = {
   text: "Text",
   list: "List",
   image: "Image",
   link: "Link",
+  place: "Place",
   board: "Board",
   column: "Column",
 };
@@ -28,6 +29,7 @@ export const TYPE_GLYPH = {
   list: "☰",
   image: "▣",
   link: "↗",
+  place: "◎",
   board: "▢",
   column: "▥",
 };
@@ -37,20 +39,20 @@ export const TYPE_GLYPH = {
  * One level of nesting, no recursion. This is Milanote's rule and it is what
  * keeps drag, layout and lookup tractable.
  */
-export const COLUMNABLE = ["text", "list", "image", "link", "board"];
+export const COLUMNABLE = ["text", "list", "image", "link", "place", "board"];
 
 /** Breadcrumbs are capped so a cycle of boards can't grow them forever. */
 export const TRAIL_MAX = 10;
 export const BACK_MAX = 50;
 
 /** Cards whose top bar can be tinted, for colour-coding a board. */
-export const ACCENTABLE = ["text", "list", "link", "column"];
+export const ACCENTABLE = ["text", "list", "link", "place", "column"];
 
 /**
  * Cards the inspector offers a colour for. Boards are here too, but they wear
  * it on their thumbnail rather than a top bar — they haven't got one.
  */
-export const COLOURABLE = ["text", "list", "link", "column", "board"];
+export const COLOURABLE = ["text", "list", "link", "place", "column", "board"];
 
 /** Boards are a fixed-size tile, like Milanote. Nothing to drag bigger. */
 export const NO_RESIZE = ["board"];
@@ -63,6 +65,7 @@ export const MIN_SIZE = {
   list: { w: 160, h: 62 },
   image: { w: 90, h: 70 },
   link: { w: 150, h: 66 },
+  place: { w: 150, h: 66 },
   board: { w: 78, h: 104 },
   column: { w: 200, h: 140 },
 };
@@ -72,6 +75,7 @@ export const DEFAULT_SIZE = {
   list: { w: 240, h: 150 },
   image: { w: 280, h: 200 },
   link: { w: 240, h: 84 },
+  place: { w: 240, h: 84 },
   // A smallish tile: a square thumbnail with two short lines of text under it.
   board: { w: 98, h: 126 },
   column: { w: 270, h: 340 },

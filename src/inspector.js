@@ -23,6 +23,7 @@ import {
 import { setBoardCover } from "./boards.js";
 import { importImage } from "./images.js";
 import { openLink } from "./cards/link.js";
+import { openPlace } from "./cards/place.js";
 
 let panel = null;
 let repaint = () => {};
@@ -59,6 +60,7 @@ export function refreshInspector() {
   if (COLOURABLE.includes(card.type)) panel.appendChild(colourTool(card));
   if (card.type === "list") panel.appendChild(listStyleTool(card));
   if (card.type === "link") panel.appendChild(openLinkTool(card));
+  if (card.type === "place") panel.appendChild(openPlaceTool(card));
 
   if (card.type === "board") {
     panel.appendChild(pictureTool(card));
@@ -180,6 +182,14 @@ function openLinkTool(card) {
     const target = getCard(card.id);
     if (!target) return;
     if (!(await openLink(target))) onStatus("That doesn't look like a web address.");
+  });
+}
+
+function openPlaceTool(card) {
+  return tool("Map", "◎", async () => {
+    const target = getCard(card.id);
+    if (!target) return;
+    if (!(await openPlace(target))) onStatus("Type a place, a postcode, or paste a Maps link.");
   });
 }
 

@@ -246,6 +246,12 @@ export function makeCard(type, x, y, extra) {
     card.accent = null;
   }
 
+  if (type === "place") {
+    card.query = "";
+    card.label = "";
+    card.accent = null;
+  }
+
   if (type === "board") {
     card.targetBoardId = null;
     card.accent = null;

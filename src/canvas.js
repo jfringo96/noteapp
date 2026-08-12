@@ -153,16 +153,8 @@ function buildPicker() {
         return;
       }
 
-      if (type === "link") {
-        addCard(type, x, y);
-        focusLinkTitle(getSelectedId());
-        return;
-      }
-
       addCard(type, x, y);
-
-      if (type === "column") focusColumnTitle(getSelectedId());
-      else focusCard(getSelectedId());
+      focusNewCard(type, getSelectedId());
     });
 
     picker.appendChild(button);
@@ -297,14 +289,20 @@ export function focusCard(id) {
   if (field) field.focus();
 }
 
-/** A new column wants its title typed straight away. */
-export function focusColumnTitle(id) {
+/**
+ * Puts the caret wherever a card of this type most wants it. A link is useless
+ * without an address, a place without a location, a column without a name.
+ */
+export function focusNewCard(type, id) {
   const el = elements.get(id);
-  if (el && el.__columnTitle) el.__columnTitle.focus();
-}
+  if (!el) return;
 
-/** A new link is useless until it has an address, so start there. */
-export function focusLinkTitle(id) {
-  const el = elements.get(id);
-  if (el && el.__linkUrl) el.__linkUrl.focus();
+  const field =
+    (type === "column" && el.__columnTitle) ||
+    (type === "link" && el.__linkUrl) ||
+    (type === "place" && el.__placeQuery) ||
+    null;
+
+  if (field) field.focus();
+  else focusCard(id);
 }

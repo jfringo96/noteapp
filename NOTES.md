@@ -216,6 +216,25 @@ The colour tool calls `render()` directly rather than going through the store's
 render hook, because dragging around the colour wheel fires continuously and
 rebuilding the chrome would rebuild the inspector the pointer is inside.
 
+### Maps: build a URL, hand it over, fetch nothing
+
+Three options were weighed for a map card: a live tile map (Leaflet plus
+OpenStreetMap), a static map image cached to disk, and simply opening the
+location in the browser.
+
+The first two need an account with a mapping provider and an API key pasted
+into the app, and the live one needs the network every time you look at it. The
+owner ruled both out — no signups, no keys.
+
+So a place card holds text and builds a Google Maps URL on double-click. It
+costs nothing, works with no account, and cannot break when a provider changes
+its terms. A pasted Maps link is used as-is, which covers the fallback of
+grabbing a URL by hand.
+
+Worth remembering if this comes up again: **the constraint that made this easy
+was accepting that the map lives in the browser, not in the card.** Every
+expensive option came from wanting to render the map inside the app.
+
 ### Link cards fetch nothing
 
 `SPEC.md` lists link preview cards that scrape metadata as a non-goal, and that

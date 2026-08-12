@@ -10,38 +10,24 @@
  */
 
 import { commitEdit, getCard, stashEdit, touch } from "../store.js";
-
-/** Only ever hand the OS something we are sure is a web address. */
-export function isOpenable(url) {
-  try {
-    const parsed = new URL(String(url).trim());
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-/** Adds https:// to something typed as "example.com". */
-function normalise(url) {
-  const trimmed = String(url).trim();
-  if (!trimmed) return "";
-  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
-  return "https://" + trimmed;
-}
+import { isWebUrl, normaliseUrl } from "../url.js";
 
 export async function openLink(card) {
-  const url = normalise(card.url);
-  if (!isOpenable(url)) return false;
+  const url = normaliseUrl(card.url);
+  if (!isWebUrl(url)) return false;
   return window.api.openExternal(url);
 }
 
 export function build(card, el, body) {
   const face = document.createElement("div");
-  face.className = "link-face";
+  face.className = "ref-face";
+
+  const text = document.createElement("div");
+  text.className = "ref-text";
 
   const title = document.createElement("input");
   title.type = "text";
-  title.className = "link-title";
+  title.className = "ref-title";
   title.placeholder = "Title";
   title.spellcheck = false;
   title.value = card.title || "";
@@ -49,7 +35,7 @@ export function build(card, el, body) {
 
   const url = document.createElement("input");
   url.type = "text";
-  url.className = "link-url";
+  url.className = "ref-sub";
   url.placeholder = "example.com";
   url.spellcheck = false;
   url.value = card.url || "";
@@ -58,15 +44,16 @@ export function build(card, el, body) {
   bindField(title, card.id, "title");
   bindField(url, card.id, "url");
 
-  // Double-click to open, matching board cards. A single click has to stay
-  // free for selecting, and for putting the caret in either field.
+  // Double-click to open, matching places and boards. A single click has to
+  // stay free for selecting, and for putting the caret in either field.
   face.addEventListener("dblclick", (event) => {
     if (event.target === title || event.target === url) return;
     const target = getCard(card.id);
     if (target) openLink(target);
   });
 
-  face.append(title, url);
+  text.append(title, url);
+  face.appendChild(text);
   body.appendChild(face);
 
   el.__linkTitle = title;
@@ -82,7 +69,7 @@ export function update(card, el) {
     el.__linkUrl.value = card.url || "";
   }
 
-  el.classList.toggle("is-openable", isOpenable(normalise(card.url)));
+  el.classList.toggle("is-openable", isWebUrl(normaliseUrl(card.url)));
 }
 
 function bindField(input, cardId, key) {
