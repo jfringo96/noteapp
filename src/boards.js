@@ -75,7 +75,43 @@ export function boardFace(targetBoardId) {
     0
   );
 
-  return { title: board.title, count };
+  return { title: board.title, count, cover: board.cover || null };
+}
+
+/**
+ * The cover picture lives on the BOARD, not on the card pointing at it — so
+ * every card linking to that board shows it, exactly like the title does.
+ * Pass null to clear it.
+ */
+export function setBoardCover(boardId, fields) {
+  applyChange(() => {
+    const board = state.boards[boardId];
+    if (!board) return;
+
+    board.cover = fields
+      ? {
+          imageId: fields.imageId,
+          mime: fields.mime,
+          naturalW: fields.naturalW,
+          naturalH: fields.naturalH,
+        }
+      : null;
+  });
+}
+
+/**
+ * Counts boards and everything else separately, so a column can say
+ * "3 boards, 1 card" rather than lumping them together.
+ */
+export function describeContents(cards) {
+  const boards = cards.filter((card) => card.type === "board").length;
+  const others = cards.length - boards;
+
+  const parts = [];
+  if (boards) parts.push(boards === 1 ? "1 board" : `${boards} boards`);
+  if (others) parts.push(others === 1 ? "1 card" : `${others} cards`);
+
+  return parts.join(", ") || "Empty";
 }
 
 /** Adds a board card and the board it points at, in one history entry. */

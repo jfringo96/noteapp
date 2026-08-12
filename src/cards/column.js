@@ -10,6 +10,7 @@
  */
 
 import { applyChange, commitEdit, getCard, getSelectedId, stashEdit, touch } from "../store.js";
+import { describeContents } from "../boards.js";
 
 // Set by cards/index.js at load. Avoids a cycle: index.js imports this module
 // to render columns, and this module needs index.js to render their contents.
@@ -95,8 +96,7 @@ export function update(card, el) {
     el.__columnTitle.value = card.title || "";
   }
 
-  const n = card.items.length;
-  el.__columnCount.textContent = n === 1 ? "1 card" : `${n} cards`;
+  el.__columnCount.textContent = describeContents(card.items);
 
   syncItems(card, el);
 }

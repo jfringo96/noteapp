@@ -198,6 +198,21 @@ all and the console mentions something being undefined, that's usually why.
 there's a version worth keeping. The installed copy and the dev copy read the
 same `Documents\Board App\` folder, so there is only ever one set of notes.
 
+### A drag threshold is what makes whole-card dragging possible
+
+Pictures and boards drag from anywhere on the card. That only works because a
+drag now waits for the pointer to travel ~4px before it starts.
+
+The earlier version captured the pointer and called `preventDefault()` on
+`pointerdown`, which is what swallowed clicks on buttons inside the grip. Doing
+that across an entire card would have killed its click and double-click
+outright — so a board could never both drag from anywhere and open on
+double-click. Waiting for movement means a plain click is never interfered with
+at all.
+
+It also stops a 1px twitch committing a reposition and putting a pointless
+entry in the undo stack.
+
 ### Dragging has two visual modes
 
 A card on the canvas is moved with `transform: translate()` from (0,0), which

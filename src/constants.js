@@ -43,7 +43,7 @@ export const MIN_SIZE = {
   text: { w: 140, h: 80 },
   list: { w: 160, h: 62 },
   image: { w: 90, h: 70 },
-  board: { w: 150, h: 74 },
+  board: { w: 96, h: 130 },
   column: { w: 200, h: 140 },
 };
 
@@ -51,7 +51,8 @@ export const DEFAULT_SIZE = {
   text: { w: 260, h: 160 },
   list: { w: 240, h: 150 },
   image: { w: 280, h: 200 },
-  board: { w: 210, h: 92 },
+  // Squarish: a thumbnail with two short lines of text under it.
+  board: { w: 150, h: 196 },
   column: { w: 270, h: 340 },
 };
 

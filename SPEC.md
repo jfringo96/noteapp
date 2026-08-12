@@ -103,6 +103,7 @@ and a push.
     b_home: {
       id: "b_home",
       title: "Home",
+      cover: null,               // { imageId, mime, naturalW, naturalH }
       cards: [ /* Card */ ]
     }
   }
@@ -197,8 +198,14 @@ startup, when the history stacks are empty and reachability is unambiguous.
   `transform: translate()` during the gesture, then commits `x`/`y` to state on
   pointerup. **Only commit once, on release** — never per pointermove, or undo
   history fills with hundreds of entries.
-- The drag handle is a slim grip bar along the card's top edge, not the body.
-  Dragging from the body fights text selection inside textareas.
+- The drag handle is a slim grip bar along the card's top edge for anything
+  with editable text — dragging from the body there would fight selecting a
+  word. **Pictures and boards drag from anywhere on the card**, since they have
+  no text to select.
+- A drag only starts once the pointer has moved a few pixels. That threshold is
+  what lets a whole card be draggable without swallowing its own clicks: until
+  it is crossed, nothing is captured or prevented, so click and double-click
+  behave normally.
 - Resize via a handle in the bottom-right corner of a selected card. Same
   commit-on-release rule. Image cards preserve aspect ratio.
 - Single selection only: click a card to select, click empty canvas to deselect.
@@ -278,18 +285,24 @@ strikethrough.
 fill. The grip floats over the top edge rather than taking a strip out of the
 card, and appears on hover or selection.
 
-**board** — a card showing the target board's title and card count. Clicking it
-navigates there. Creating one makes the new empty board immediately — no dialog
-— and leaves you where you are with the name selected for typing.
+**board** — a rounded square thumbnail with the board's name underneath and how
+much is inside under that. No card background of its own: it reads as an object
+sitting on the board, not as another sheet of paper.
 
-Renaming afterwards is select-then-click on the name, the standard OS
-file-rename gesture: unselected, a click anywhere opens the board; once
-selected, the name becomes a text field and swallows the click.
+- **Double-click opens it.** Single click only selects.
+- Selecting reveals a **Picture** button on the thumbnail, which sets a cover
+  image for that board. The cover lives on the board, not on the card, so every
+  card pointing at it shows the same picture — exactly like the name.
+- Once selected, the name is a text field. That's the rename gesture.
+- Creating one makes the new empty board immediately — no dialog — and leaves
+  you where you are with the name selected for typing.
+- Drag any card onto a board card to move it into that board.
 
-Drag any card onto a board card to move it into that board.
+Inside a column the same card becomes a row: thumbnail on the left, name and
+count stacked beside it.
 
-**column** — a titled stack of other cards, with a permanent card count and a
-collapse toggle. Drag cards in from the canvas, drag them up and down inside it
+**column** — a titled stack of other cards, with a permanent count that reads
+"3 boards, 1 card" rather than lumping them together, and a collapse toggle. Drag cards in from the canvas, drag them up and down inside it
 to reorder, and drag them back out onto the canvas. A line shows where a card
 will land. Resizes from the bottom-right like any other card.
 

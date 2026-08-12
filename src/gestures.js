@@ -36,8 +36,20 @@ export function setDropHandlers({ resolve, feedback, commit }) {
   commitDrop = commit;
 }
 
-export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) {
+/**
+ * How far the pointer must travel before it counts as a drag rather than a
+ * click.
+ *
+ * This is what lets a whole card be draggable without swallowing its clicks.
+ * Nothing is captured or prevented until the threshold is crossed, so a plain
+ * click still produces click and dblclick as normal.
+ */
+const DRAG_THRESHOLD = 4;
+
+export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {}) {
+  let pending = false;
   let active = false;
+  let pointerId = null;
   let dx = 0;
   let dy = 0;
   let startX = 0;
@@ -49,16 +61,18 @@ export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) 
   let grabOffsetX = 0;
   let grabOffsetY = 0;
 
-  grip.addEventListener("pointerdown", (event) => {
-    // Controls living in the grip — delete, the colour picker, the list's
-    // bullet/checkbox toggle — must not start a drag. This handler calls
-    // preventDefault, which swallows the click that would reach them.
-    if (event.button !== 0 || event.target.closest("button, input, select, label")) return;
+  surface.addEventListener("pointerdown", (event) => {
+    // Controls must never start a drag: the grip's buttons and colour picker,
+    // a board's name field, and the resize handle, which has its own gesture.
+    if (event.button !== 0) return;
+    if (event.target.closest("button, input, select, label, .card-resize")) return;
     if (!getCard(cardId)) return;
 
     select(cardId);
 
-    active = true;
+    pending = true;
+    active = false;
+    pointerId = event.pointerId;
     dx = 0;
     dy = 0;
     startX = event.clientX;
@@ -67,13 +81,18 @@ export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) 
     pointerY = event.clientY;
     startScrollLeft = scroller.scrollLeft;
     startScrollTop = scroller.scrollTop;
+  });
+
+  function begin(event) {
+    pending = false;
+    active = true;
 
     if (lifted) {
       // Freeze the size before going fixed, or the card would collapse to
       // whatever `position: fixed` gives an auto-width element.
       const box = el.getBoundingClientRect();
-      grabOffsetX = event.clientX - box.left;
-      grabOffsetY = event.clientY - box.top;
+      grabOffsetX = startX - box.left;
+      grabOffsetY = startY - box.top;
       el.style.width = box.width + "px";
       el.style.height = box.height + "px";
       el.style.left = box.left + "px";
@@ -81,16 +100,26 @@ export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) 
       el.classList.add("is-lifted");
     }
 
-    grip.setPointerCapture(event.pointerId);
+    surface.setPointerCapture(event.pointerId);
     el.classList.add("is-dragging");
-    event.preventDefault();
-  });
+  }
 
-  grip.addEventListener("pointermove", (event) => {
-    if (!active) return;
+  surface.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== pointerId) return;
+    if (!pending && !active) return;
 
     pointerX = event.clientX;
     pointerY = event.clientY;
+
+    if (pending) {
+      const moved = Math.hypot(event.clientX - startX, event.clientY - startY);
+      if (moved < DRAG_THRESHOLD) return;
+      begin(event);
+    }
+
+    // Only now, once this is definitely a drag, so text selection stops but
+    // clicks were never interfered with.
+    event.preventDefault();
 
     if (lifted) {
       el.style.left = event.clientX - grabOffsetX + "px";
@@ -109,8 +138,17 @@ export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) 
   });
 
   const finish = () => {
+    // Never crossed the threshold, so it was a click. Leave it alone — the
+    // click and dblclick handlers are about to run.
+    if (pending) {
+      pending = false;
+      pointerId = null;
+      return;
+    }
+
     if (!active) return;
     active = false;
+    pointerId = null;
 
     const destination = resolveDrop(pointerX, pointerY, cardId, { lifted });
     showFeedback(null);
@@ -145,8 +183,8 @@ export function attachDrag(grip, el, cardId, scroller, { lifted = false } = {}) 
     });
   };
 
-  grip.addEventListener("pointerup", finish);
-  grip.addEventListener("pointercancel", finish);
+  surface.addEventListener("pointerup", finish);
+  surface.addEventListener("pointercancel", finish);
 }
 
 export function attachResize(handle, el, cardId, scroller) {

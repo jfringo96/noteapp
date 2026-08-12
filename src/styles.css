@@ -489,10 +489,41 @@ html, body {
 
 /* ------------------------------------------------------------- board cards */
 
-.card-board { background: #fbf4e6; }
+/*
+ * On the canvas a board is a rounded thumbnail with its name underneath, on no
+ * background of its own — so it reads as an object sitting on the board rather
+ * than as another sheet of paper. The grip is hidden; the whole card drags.
+ */
+.card-board {
+  background: none;
+  box-shadow: none;
+  border-radius: 10px;
+}
+
+/* The grip floats over the thumbnail rather than taking a strip out of the
+   card — the whole card drags, so it exists only to carry the delete button. */
+.card-board .card-grip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  color: #fff;
+  background: linear-gradient(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0));
+  border-radius: 10px 10px 0 0;
+  opacity: 0;
+}
+
+.card-board:hover .card-grip,
+.card-board.is-selected .card-grip { opacity: 1; }
+
+.card-board .card-delete { opacity: .85; }
+.card-board .card-delete:hover { opacity: 1; background: rgb(255 255 255 / 0.25); }
+
+.card-board.is-selected { box-shadow: 0 0 0 2px var(--accent); }
 
 .card-board.is-drop-target {
-  box-shadow: var(--shadow), 0 0 0 3px var(--accent);
+  box-shadow: 0 0 0 3px var(--accent);
   transform: scale(1.02);
 }
 
@@ -501,18 +532,64 @@ html, body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: .15rem;
-  padding: .45rem .65rem .6rem;
+  align-items: center;
+  gap: .45rem;
+  padding: .25rem;
   cursor: pointer;
+}
+
+.board-thumb {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #d9d0bd;
+  border-radius: 10px;
+}
+
+.board-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
+.board-cover[hidden] { display: none; }
+
+/* Revealed by selecting the board — see the note at the end of board.js. */
+.board-cover-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  padding: .2rem .5rem;
+  font: inherit;
+  font-size: .6875rem;
+  color: #fff;
+  background: rgb(0 0 0 / 0.62);
+  border: 0;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.card-board.is-selected .board-cover-btn { opacity: 1; pointer-events: auto; }
+.board-cover-btn:hover { background: rgb(0 0 0 / 0.8); }
+
+.board-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .05rem;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: .15rem;
 }
 
 .board-name {
   width: 100%;
   padding: 0;
   font: inherit;
-  font-size: .9375rem;
+  font-size: .875rem;
   font-weight: 600;
+  text-align: center;
   color: var(--ink);
   background: none;
   border: 0;
@@ -521,21 +598,55 @@ html, body {
 
 .board-name:focus { outline: none; }
 
-/* Until the card is selected the name ignores the pointer, so a click passes
-   through to the face and opens the board. Once selected it becomes a normal
-   text field and swallows the click, which is the rename gesture. */
+/* Until the card is selected the name ignores the pointer, so a click lands on
+   the face and simply selects. Once selected it becomes a normal text field —
+   that is the rename gesture. */
 .card-board:not(.is-selected) .board-name { pointer-events: none; cursor: pointer; }
 
-.card-board.is-selected .board-name {
-  border-bottom: 1px solid var(--chrome-line);
-  cursor: text;
-}
+.board-meta { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 
-.board-meta { font-size: .75rem; color: var(--muted); }
-
-.card-board.is-broken { background: #f7ecec; }
+.card-board.is-broken .board-thumb { background: #e3caca; }
 .card-board.is-broken .board-name { color: #9a6a6a; }
 .card-board.is-broken .board-meta { color: #b08a8a; }
+
+/* ---------------------------------------- a board sitting inside a column */
+
+/*
+ * The same DOM becomes a row: thumbnail on the left, name and count stacked
+ * beside it. Only CSS differs.
+ */
+.card-board.is-in-column {
+  background: rgb(90 70 35 / 0.05);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.card-board.is-in-column.is-selected { box-shadow: 0 0 0 2px var(--accent); }
+
+.card-board.is-in-column .board-face {
+  flex-direction: row;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem;
+}
+
+.card-board.is-in-column .board-thumb {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  aspect-ratio: auto;
+  border-radius: 8px;
+}
+
+.card-board.is-in-column .board-text {
+  align-items: flex-start;
+  padding-bottom: 0;
+}
+
+.card-board.is-in-column .board-name { text-align: left; font-size: .9375rem; }
+
+/* No room for it over a 54px thumbnail — select the board on the canvas. */
+.card-board.is-in-column .board-cover-btn { display: none; }
 
 /* ------------------------------------------------------------ column cards */
 

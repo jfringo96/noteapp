@@ -103,9 +103,23 @@ export async function imageUrl(card) {
 export async function sweepImages(state) {
   const keep = new Set();
 
+  const remember = (ref) => {
+    if (ref && ref.imageId) keep.add(imageFileName(ref));
+  };
+
   for (const board of Object.values(state.boards)) {
+    // A board's cover is an image reference too, and nothing else points at it.
+    remember(board.cover);
+
     for (const card of board.cards) {
-      if (card.type === "image" && card.imageId) keep.add(imageFileName(card));
+      if (card.type === "image") remember(card);
+
+      // Cards inside a column are owned by the column, so they are not in
+      // board.cards. Missing them here would delete their files on the next
+      // startup — every image you had put in a column.
+      if (card.type === "column") {
+        for (const item of card.items) if (item.type === "image") remember(item);
+      }
     }
   }
 

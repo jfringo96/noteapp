@@ -94,10 +94,17 @@ export function buildCard(card, scroller, options = {}) {
     attachResize(resize, el, card.id, scroller);
   }
 
-  attachDrag(grip, el, card.id, scroller, { lifted: inColumn });
+  // Pictures and boards drag from anywhere on the card. They have no text to
+  // select, and on a picture the grip is an overlay you have to find first.
+  // Everything with editable text keeps the grip, so dragging never fights
+  // selecting a word.
+  const surface = WHOLE_CARD_DRAG.includes(card.type) ? el : grip;
+  attachDrag(surface, el, card.id, scroller, { lifted: inColumn });
 
   return el;
 }
+
+const WHOLE_CARD_DRAG = ["image", "board"];
 
 export function updateCard(el, card, index, selectedId) {
   // Geometry belongs to the column when the card is in one.
