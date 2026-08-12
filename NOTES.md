@@ -216,6 +216,26 @@ The colour tool calls `render()` directly rather than going through the store's
 render hook, because dragging around the colour wheel fires continuously and
 rebuilding the chrome would rebuild the inspector the pointer is inside.
 
+### The phone export is a folder of JPEGs, not a clever file
+
+Considered: one self-contained HTML gallery, a PDF, and a plain folder of
+images. The folder won.
+
+The constraint was "over the internet, then readable offline with no signal".
+All three satisfy that, but only the folder ends up in the phone's own photo
+app — which is a far better viewer than anything worth building, and needs no
+app, no account and no file management. It is also the most durable output: a
+folder of photos is still readable in ten years with no software at all.
+
+Two details that are easy to get wrong:
+
+- **Re-encode to JPEG.** Stored images are WebP and phone galleries handle it
+  badly. Flatten onto white first, or a transparent PNG exports black.
+- **Never overwrite a previous export.** The folder gets a suffix instead.
+
+`SPEC.md` originally called for the single-HTML version, from when the phone was
+an iPhone being AirDropped to. Android plus OneDrive makes the folder simpler.
+
 ### A gesture nothing advertises may as well not exist
 
 Links and places opened on double-click, and nobody found it. There was nothing

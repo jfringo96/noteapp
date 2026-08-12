@@ -5,7 +5,7 @@
  * packaged build it loads the built files from dist/.
  */
 
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as storage from "./storage.js";
@@ -64,6 +64,23 @@ app.whenReady().then(async () => {
   ipcMain.handle("image:write", (_event, name, bytes) => storage.writeImage(name, bytes));
   ipcMain.handle("image:read", (_event, name) => storage.readImage(name));
   ipcMain.handle("image:sweep", (_event, keep) => storage.sweepImages(keep));
+  ipcMain.handle("export:choose", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "Where should the pictures go?",
+      buttonLabel: "Export here",
+      properties: ["openDirectory", "createDirectory"],
+    });
+
+    return result.canceled ? null : result.filePaths[0];
+  });
+
+  ipcMain.handle("export:write", async (_event, parent, folderName, files) => {
+    const result = await storage.writeExport(parent, folderName, files);
+    // Opening the folder is the clearest possible confirmation it worked.
+    shell.openPath(result.path);
+    return result;
+  });
+
   ipcMain.handle("dataDir:path", () => storage.dataDir());
   ipcMain.handle("dataDir:reveal", () => shell.openPath(storage.dataDir()));
 

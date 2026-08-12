@@ -36,6 +36,8 @@ import {
 
 import { resolveDrop, showDropFeedback } from "./drop.js";
 import { initInspector, refreshInspector } from "./inspector.js";
+import { exportBoardImages } from "./export.js";
+import { initLightbox, isOpen as lightboxOpen } from "./lightbox.js";
 
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
@@ -124,6 +126,7 @@ initSwitcher(switcherEl, $("boardsBtn"), setStatus);
 // wheel fires continuously, and there is no need to rebuild the chrome — which
 // includes the inspector the pointer is currently inside — on every step.
 initInspector({ element: $("inspector"), repaint: render, status: setStatus, add: addAtCentre });
+initLightbox($("lightbox"));
 
 setDropHandlers({
   resolve: resolveDrop,
@@ -187,6 +190,7 @@ undoBtn.addEventListener("click", () => undo());
 redoBtn.addEventListener("click", () => redo());
 backBtn.addEventListener("click", () => goBack());
 $("folderBtn").addEventListener("click", () => window.api.revealDataFolder());
+$("exportBtn").addEventListener("click", () => exportBoardImages(setStatus));
 
 /* ----------------------------------------------------------- board title --- */
 
@@ -208,6 +212,10 @@ const isEditable = (el) =>
   !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 
 window.addEventListener("keydown", (event) => {
+  // The viewer owns the keyboard while it is up — undoing or deleting
+  // something you cannot see would be alarming.
+  if (lightboxOpen()) return;
+
   const mod = event.ctrlKey || event.metaKey;
 
   if (mod && event.key.toLowerCase() === "z") {

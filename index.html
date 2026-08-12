@@ -20,6 +20,7 @@
       <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">Undo</button>
       <button id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">Redo</button>
       <span class="divider" aria-hidden="true"></span>
+      <button id="exportBtn" title="Export this board's pictures as a folder of JPEGs">Export</button>
       <button id="folderBtn" title="Open the folder your boards are saved in">Folder</button>
     </div>
   </header>
@@ -32,6 +33,21 @@
 
   <div id="picker" class="picker" role="menu" aria-label="Add a card" hidden></div>
   <div id="switcher" class="switcher" role="menu" aria-label="All boards" hidden></div>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-label="Picture viewer" hidden>
+    <div class="lightbox-stage">
+      <img class="lightbox-image" alt="">
+    </div>
+
+    <button class="lightbox-prev" type="button" aria-label="Previous picture">‹</button>
+    <button class="lightbox-next" type="button" aria-label="Next picture">›</button>
+    <button class="lightbox-close" type="button" aria-label="Close">×</button>
+
+    <div class="lightbox-bar">
+      <span class="lightbox-caption"></span>
+      <span class="lightbox-counter"></span>
+    </div>
+  </div>
 
   <p id="empty" class="empty-state">Double-click anywhere to add a card, or drop in an image</p>
   <div id="status" class="status" role="status" aria-live="polite" hidden></div>

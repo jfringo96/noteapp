@@ -18,4 +18,7 @@ contextBridge.exposeInMainWorld("api", {
   dataDir: () => ipcRenderer.invoke("dataDir:path"),
   revealDataFolder: () => ipcRenderer.invoke("dataDir:reveal"),
   openExternal: (url) => ipcRenderer.invoke("shell:open", url),
+  chooseExportFolder: () => ipcRenderer.invoke("export:choose"),
+  writeExport: (parent, folderName, files) =>
+    ipcRenderer.invoke("export:write", parent, folderName, files),
 });

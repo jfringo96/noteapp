@@ -78,6 +78,31 @@ function cardSize(naturalW, naturalH) {
   };
 }
 
+/**
+ * A card's picture as JPEG bytes, for export.
+ *
+ * Stored images are WebP, which phone photo apps handle badly — an exported
+ * folder needs to behave like ordinary photos wherever it lands.
+ */
+export async function imageAsJpeg(card, quality = 0.9) {
+  const bytes = await window.api.readImage(imageFileName(card));
+  if (!bytes) return null;
+
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: card.mime }));
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = canvas.getContext("2d");
+
+  // JPEG has no transparency. Without a white ground underneath, anything
+  // transparent — a PNG screenshot, say — comes out black.
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, bitmap.width, bitmap.height);
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close();
+
+  const jpeg = await canvas.convertToBlob({ type: "image/jpeg", quality });
+  return jpeg.arrayBuffer();
+}
+
 /** An object URL for a card's image, reading it from disk the first time. */
 export async function imageUrl(card) {
   const name = imageFileName(card);

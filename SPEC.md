@@ -303,7 +303,15 @@ text; opening it builds a URL and hands it to the browser. Anything more —
 embedded tiles, geocoding, static map images — needs an account with a mapping
 provider, and isn't worth that.
 
-**image** — the photograph and nothing else. No paper, no frame, no letterbox
+**image** — the photograph and nothing else. Double-click fills the window with
+it, dimmed board behind, and the arrows — on screen or on the keyboard — walk
+every picture on the board in the same reading order the export uses. Escape or
+a click outside closes it.
+
+While it is up it owns the keyboard: undoing or deleting something you cannot
+see would be alarming.
+
+ No paper, no frame, no letterbox
 fill. The grip floats over the top edge rather than taking a strip out of the
 card, and appears on hover or selection.
 
@@ -393,14 +401,26 @@ board leaves cards pointing at it as broken links.
 
 ---
 
-## Gallery export
+## Export for the phone
 
-A button that writes a **single self-contained HTML file** containing every
-image on the current board — or all boards, my choice at export time — with the
-images embedded. I AirDrop it to my phone and open it in Safari.
+**Export** writes every picture on the current board into an ordinary folder of
+JPEGs, somewhere I choose. Numbered in reading order — top to bottom, then left
+to right — so the phone shows them in the order they sit on the board.
 
-It must work with no network and no app installed. Simple, big, tappable
-images; dark background so photographs read accurately. Nothing else.
+The route is: export into OneDrive, open the folder on my Android phone, save
+the pictures to the gallery. Then they're normal photos: swipe, pinch, fully
+offline, no app needed and nothing to sign into.
+
+Two details that matter:
+
+- **Re-encode to JPEG.** Stored images are WebP, which phone photo apps handle
+  badly. Flatten onto white first, or anything transparent comes out black.
+- **Never overwrite a previous export.** "Iceland", then "Iceland 2".
+
+Nested boards are not followed. "This board" means this one.
+
+A folder of photos is the most useful thing this app can produce — it opens
+anywhere, and it's still readable in ten years with no software at all.
 
 Also keep **Export JSON** and **Import JSON** for the whole document. That's an
 escape hatch, not the backup strategy — the backup strategy is the folder.

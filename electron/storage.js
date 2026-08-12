@@ -53,6 +53,52 @@ export async function writeDoc(doc) {
   return { savedAt: Date.now() };
 }
 
+/* ---------------------------------------------------------------- export --- */
+
+/** Windows forbids these outright; the rest is trimmed to keep names sane. */
+const clean = (name) =>
+  String(name || "")
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60) || "Board";
+
+/**
+ * Writes an exported folder of pictures.
+ *
+ * `parent` comes from the OS folder picker, so it is trusted. Everything else
+ * comes from the renderer and is cleaned — a name containing a slash would
+ * otherwise write outside the folder the user chose.
+ */
+export async function writeExport(parent, folderName, files) {
+  const dir = await uniqueDir(path.join(parent, clean(folderName)));
+  await fs.mkdir(dir, { recursive: true });
+
+  let written = 0;
+
+  for (const file of files) {
+    const name = clean(file.name);
+    if (!name) continue;
+    await fs.writeFile(path.join(dir, name), Buffer.from(file.bytes));
+    written++;
+  }
+
+  return { path: dir, written };
+}
+
+/** Never overwrite an earlier export — "Iceland", then "Iceland 2". */
+async function uniqueDir(base) {
+  for (let n = 1; n < 100; n++) {
+    const candidate = n === 1 ? base : `${base} ${n}`;
+    try {
+      await fs.access(candidate);
+    } catch {
+      return candidate;
+    }
+  }
+  return `${base} ${Date.now()}`;
+}
+
 /* ---------------------------------------------------------------- images --- */
 
 const imagesDir = () => path.join(DATA_DIR, "images");

@@ -3,6 +3,7 @@
  */
 
 import { imageUrl } from "../images.js";
+import { openLightbox } from "../lightbox.js";
 
 export function build(card, el, body) {
   const wrap = document.createElement("div");
@@ -19,6 +20,10 @@ export function build(card, el, body) {
   missing.hidden = true;
 
   wrap.append(img, missing);
+
+  // Double-click opens the viewer. Safe alongside dragging from anywhere on
+  // the card, because a drag only begins once the pointer has actually moved.
+  wrap.addEventListener("dblclick", () => openLightbox(card.id));
 
   el.__img = img;
   el.__imageMissing = missing;
