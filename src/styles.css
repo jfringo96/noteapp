@@ -1,17 +1,30 @@
 /* Quiet on purpose. This is a tool, not a landing page. */
 
 :root {
-  --ground: #e7dfd0;
-  --ground-dot: #d2c7b1;
-  --chrome: #f1ebdf;
-  --chrome-line: #d8ccb6;
-  --paper: #fffdf9;
-  --ink: #2f2c26;
-  --muted: #8a8272;
-  --accent: #a2662f;
+  --ground: #eef0f2;
+  --ground-dot: #d5d9de;
+  --chrome: #ffffff;
+  --chrome-line: #e4e7ec;
+  --line-strong: #c8ced7;
+  --paper: #ffffff;
+  --hover: #f0f2f5;
+  --sunken: #f4f5f7;
+  --ink: #2b3240;
+  --muted: #8b929d;
+  --faint: #b4bac4;
+
+  /* Selection is near-black rather than a colour, as Milanote's is. It reads
+     as "this one" without competing with the content. */
+  --accent: #232935;
+
+  /* Reserved for things that actually go somewhere when clicked. */
+  --link: #2f6bd8;
+
+  --danger: #b3261e;
+  --danger-soft: #fbe9e7;
 
   --radius: 6px;
-  --shadow: 0 1px 2px rgb(60 45 20 / 0.16), 0 6px 16px rgb(60 45 20 / 0.14);
+  --shadow: 0 1px 2px rgb(20 25 35 / 0.10), 0 4px 14px rgb(20 25 35 / 0.09);
 
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -67,13 +80,13 @@ html, body {
   font: inherit;
   font-size: .875rem;
   color: var(--ink);
-  background: #fbf7ef;
+  background: #fff;
   border: 1px solid var(--chrome-line);
   border-radius: 4px;
   cursor: pointer;
 }
 
-.icon-btn:hover:not(:disabled) { background: #fff; border-color: #c3b498; }
+.icon-btn:hover:not(:disabled) { background: var(--hover); border-color: var(--line-strong); }
 .icon-btn:disabled { opacity: .4; cursor: default; }
 
 /* --------------------------------------------------------------- crumbs */
@@ -99,9 +112,9 @@ html, body {
   cursor: pointer;
 }
 
-.crumb:hover:not(:disabled) { color: var(--ink); background: #e6ddca; }
+.crumb:hover:not(:disabled) { color: var(--ink); background: var(--hover); }
 .crumb:disabled { color: var(--ink); cursor: default; }
-.crumb-sep { font-size: .8125rem; color: #b7ab93; }
+.crumb-sep { font-size: .8125rem; color: var(--faint); }
 
 /* ------------------------------------------------------------- switcher */
 
@@ -112,17 +125,17 @@ html, body {
   max-height: 60vh;
   overflow-y: auto;
   padding: .25rem;
-  background: #fffdf9;
+  background: var(--paper);
   border: 1px solid var(--chrome-line);
   border-radius: 6px;
-  box-shadow: 0 10px 28px rgb(60 45 20 / 0.22);
+  box-shadow: 0 10px 28px rgb(20 25 35 / 0.16);
 }
 
 .switcher[hidden] { display: none; }
 
 .switcher-row { display: flex; align-items: center; border-radius: 4px; }
-.switcher-row:hover { background: #f0e8d8; }
-.switcher-row.is-current { background: #ece2cd; }
+.switcher-row:hover { background: var(--hover); }
+.switcher-row.is-current { background: var(--sunken); }
 
 .switcher-open {
   display: flex;
@@ -160,7 +173,7 @@ html, body {
 }
 
 .switcher-row:hover .switcher-delete { opacity: 1; }
-.switcher-delete:hover { color: #8c2f2f; background: #f2dede; }
+.switcher-delete:hover { color: var(--danger); background: var(--danger-soft); }
 
 .topbar-actions { display: flex; align-items: center; gap: .35rem; margin-left: auto; }
 
@@ -169,13 +182,13 @@ html, body {
   font: inherit;
   font-size: .875rem;
   color: var(--ink);
-  background: #fbf7ef;
+  background: #fff;
   border: 1px solid var(--chrome-line);
   border-radius: 4px;
   cursor: pointer;
 }
 
-.topbar-actions button:hover:not(:disabled) { background: #fff; border-color: #c3b498; }
+.topbar-actions button:hover:not(:disabled) { background: var(--hover); border-color: var(--line-strong); }
 .topbar-actions button:disabled { opacity: .4; cursor: default; }
 
 .divider {
@@ -222,7 +235,7 @@ html, body {
   cursor: pointer;
 }
 
-.tool:hover { background: #e6ddca; }
+.tool:hover { background: var(--hover); }
 
 .tool-icon {
   display: flex;
@@ -232,7 +245,7 @@ html, body {
   height: 26px;
   font-size: 14px;
   line-height: 1;
-  background: #fbf7ef;
+  background: #fff;
   border: 1px solid var(--chrome-line);
   border-radius: 5px;
 }
@@ -241,9 +254,9 @@ html, body {
 
 .tool-label { font-size: .625rem; color: var(--muted); text-align: center; }
 
-.tool-danger .tool-icon { color: #8c2f2f; }
-.tool-danger.is-armed .tool-icon { color: #fff; background: #8c2f2f; border-color: #8c2f2f; }
-.tool-danger.is-armed .tool-label { color: #8c2f2f; font-weight: 600; }
+.tool-danger .tool-icon { color: var(--danger); }
+.tool-danger.is-armed .tool-icon { color: #fff; background: var(--danger); border-color: var(--danger); }
+.tool-danger.is-armed .tool-label { color: var(--danger); font-weight: 600; }
 
 /* The real input sits under its swatch — clicking the tool opens the OS
    picker, and nothing has to be re-implemented. */
@@ -289,9 +302,9 @@ html, body {
   margin: 0;
   padding: .4rem .6rem;
   font-size: .8125rem;
-  color: #5c1f1f;
-  background: #f6dcdc;
-  border: 1px solid #e0b4b4;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid #f0c4bf;
   border-radius: 4px;
 }
 
@@ -306,10 +319,10 @@ html, body {
   flex-direction: column;
   min-width: 8rem;
   padding: .25rem;
-  background: #fffdf9;
+  background: var(--paper);
   border: 1px solid var(--chrome-line);
   border-radius: 6px;
-  box-shadow: 0 10px 28px rgb(60 45 20 / 0.22);
+  box-shadow: 0 10px 28px rgb(20 25 35 / 0.16);
 }
 
 .picker[hidden] { display: none; }
@@ -326,7 +339,7 @@ html, body {
   cursor: pointer;
 }
 
-.picker button:hover { background: #f0e8d8; }
+.picker button:hover { background: var(--hover); }
 
 /* ------------------------------------------------------------------- cards */
 
@@ -343,7 +356,7 @@ html, body {
 .card.is-selected { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
 
 .card.is-dragging {
-  box-shadow: 0 2px 6px rgb(60 45 20 / 0.22), 0 16px 32px rgb(60 45 20 / 0.22);
+  box-shadow: 0 2px 6px rgb(20 25 35 / 0.16), 0 16px 32px rgb(20 25 35 / 0.16);
   cursor: grabbing;
 }
 
@@ -356,7 +369,7 @@ html, body {
   justify-content: space-between;
   flex: 0 0 20px;
   border-radius: var(--radius) var(--radius) 0 0;
-  background: rgb(90 70 35 / 0.07);
+  background: rgb(20 25 35 / 0.045);
   cursor: grab;
   /* Only on the grip and the resize handle, so the canvas still scrolls by
      touch everywhere else. */
@@ -441,7 +454,7 @@ html, body {
 }
 
 .card-text-input:focus { outline: none; }
-.card-text-input::placeholder { color: #b9b09e; }
+.card-text-input::placeholder { color: var(--faint); }
 
 /* -------------------------------------------------------------- list cards */
 
@@ -458,7 +471,7 @@ html, body {
   width: 5px;
   height: 5px;
   margin: 0 2px;
-  background: #9a9082;
+  background: var(--faint);
   border-radius: 50%;
 }
 
@@ -481,7 +494,7 @@ html, body {
 }
 
 .list-input:focus { outline: none; }
-.list-row.is-checked .list-input { color: #9a9082; text-decoration: line-through; }
+.list-row.is-checked .list-input { color: var(--faint); text-decoration: line-through; }
 
 /* ------------------------------------------------------------- image cards */
 
@@ -587,12 +600,34 @@ html, body {
 .ref-sub:focus { outline: none; }
 
 .ref-title::placeholder,
-.ref-sub::placeholder { color: #b9b09e; font-weight: 400; }
+.ref-sub::placeholder { color: var(--faint); font-weight: 400; }
 
-/* A hint that double-clicking will do something. */
 .card-link.is-openable .ref-sub,
-.card-place.is-openable .ref-sub { color: var(--accent); }
-.card-link.is-openable .ref-sub { text-decoration: underline; }
+.card-place.is-openable .ref-sub { color: var(--link); }
+
+/*
+ * The obvious thing to click.
+ *
+ * Double-click on the card works too, but nothing about a card announces that,
+ * so on its own it may as well not exist. This button is the affordance.
+ */
+.ref-open {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--link);
+  background: var(--sunken);
+  border: 1px solid var(--chrome-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ref-open:hover:not(:disabled) { color: #fff; background: var(--link); border-color: var(--link); }
+.ref-open:disabled { color: var(--faint); cursor: default; }
 
 /* ------------------------------------------------------------- board cards */
 
@@ -645,7 +680,7 @@ html, body {
   min-height: 0;
   aspect-ratio: 1;
   overflow: hidden;
-  background: #d9d0bd;
+  background: #dfe3e8;
   border-radius: 10px;
 }
 
@@ -684,9 +719,9 @@ html, body {
 
 .board-meta { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 
-.card-board.is-broken .board-thumb { background: #e3caca; }
-.card-board.is-broken .board-name { color: #9a6a6a; }
-.card-board.is-broken .board-meta { color: #b08a8a; }
+.card-board.is-broken .board-thumb { background: #f3d8d5; }
+.card-board.is-broken .board-name { color: #a05c55; }
+.card-board.is-broken .board-meta { color: #bf8b85; }
 
 /* ---------------------------------------- a board sitting inside a column */
 
@@ -695,7 +730,7 @@ html, body {
  * beside it. Only CSS differs.
  */
 .card-board.is-in-column {
-  background: rgb(90 70 35 / 0.05);
+  background: var(--sunken);
   border-radius: 8px;
   box-shadow: none;
 }
@@ -729,7 +764,7 @@ html, body {
 
 /* ------------------------------------------------------------ column cards */
 
-.card-column { background: #f4eee0; }
+.card-column { background: var(--paper); }
 
 .card-column.is-drop-target { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
 
@@ -755,7 +790,7 @@ html, body {
 }
 
 .column-title:focus { outline: none; }
-.column-title::placeholder { color: #b9b09e; font-weight: 400; }
+.column-title::placeholder { color: var(--faint); font-weight: 400; }
 
 /* Milanote keeps this label permanently, and it earns its place — it is how
    you read a collapsed column. */
@@ -803,7 +838,12 @@ html, body {
   height: auto;
   z-index: auto;
   flex: 0 0 auto;
-  box-shadow: 0 1px 2px rgb(60 45 20 / 0.14);
+
+  /* Rows inside a column are flat and slightly sunken rather than raised —
+     the column is the sheet of paper, the rows are what is written on it. */
+  background: var(--sunken);
+  box-shadow: none;
+  border-radius: 8px;
 }
 
 .card.is-in-column .card-text-input { overflow: hidden; }
@@ -821,7 +861,7 @@ html, body {
   position: fixed;
   z-index: 900;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgb(60 45 20 / 0.22), 0 16px 32px rgb(60 45 20 / 0.22);
+  box-shadow: 0 2px 6px rgb(20 25 35 / 0.16), 0 16px 32px rgb(20 25 35 / 0.16);
 }
 
 /* ------------------------------------------------------------ resize handle */

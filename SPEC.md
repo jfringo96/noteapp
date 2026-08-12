@@ -287,12 +287,13 @@ it. Backspace on an empty row deletes it and focuses the row above, cursor at
 end. A per-card toggle switches between bullets and checkboxes; checked rows get
 strikethrough.
 
-**link** — a web address with a title I write myself. Double-click opens it in
-the real browser. **Not a preview card**: nothing is fetched, ever. Scraping a
+**link** — a web address with a title I write myself. A button on the card opens
+it in the real browser; double-click does the same. **Not a preview card**: nothing is fetched, ever. Scraping a
 page for a title and a thumbnail would mean every link on every board quietly
 reaching out to the internet from a machine that otherwise never does.
 
-**place** — somewhere on a map. Double-click opens it in the browser.
+**place** — somewhere on a map. A button on the card opens it in the browser;
+double-click does the same.
 
 Type a place name, a postcode, a `lat,lng` pair, or paste a Google Maps link
 straight in. A pasted link opens as-is; anything else becomes a Maps search.
@@ -430,15 +431,23 @@ installer, whatever's annoying by then.
 Don't leave this on browser defaults, but keep it quiet — this is a tool, not a
 landing page.
 
-The canvas is a warm cream ground with a low-contrast dot grid. Cards are
-near-white paper with a real drop shadow, sitting clearly above it. One accent
-colour only, for selection rings and focus states — muted and earthy rather
-than a saturated UI blue.
+Milanote's palette: a light grey ground with a low-contrast dot grid, white
+cards with a soft shadow sitting above it, and near-black text.
 
-(An earlier version specified a dark slate ground, on the grounds that
-photographs read more accurately against it. Cream was chosen anyway: this is a
-notes surface first, and it's pleasanter to read text on. Worth revisiting only
-if images start looking washed out in practice.)
+Two colours, each with one job:
+
+- **Selection and focus are near-black**, not a hue. It reads as "this one"
+  without competing with the photographs, which are the point of the board.
+- **Blue is reserved for things that actually go somewhere** when clicked —
+  links and places. Nothing decorative uses it, so it always means the same
+  thing.
+
+Rows inside a column are flat and slightly sunken rather than raised: the
+column is the sheet of paper, the rows are what's written on it.
+
+(Two earlier versions: a dark slate ground, on the grounds that photographs read
+more accurately against it, then a warm cream. Both replaced. If images ever
+start looking washed out, the ground is the thing to blame.)
 
 System font stacks. A proper type scale rather than everything at 16px, and
 comfortable line height in cards — I'll be reading notes in these.

@@ -49,8 +49,19 @@ export function build(card, el, body) {
   bindField(label, card.id, "label");
   bindField(query, card.id, "query");
 
-  // Double-click to open, matching links and boards. A single click stays free
-  // for selecting and for putting the caret in either field.
+  // A single click on an obvious button — see the same note in link.js.
+  const go = document.createElement("button");
+  go.type = "button";
+  go.className = "ref-open";
+  go.textContent = "↗";
+  go.title = "Open in Google Maps";
+  go.setAttribute("aria-label", "Open in Google Maps");
+  go.addEventListener("click", () => {
+    const target = getCard(card.id);
+    if (target) openPlace(target);
+  });
+
+  // Kept as a shortcut for anyone who tries it.
   face.addEventListener("dblclick", (event) => {
     if (event.target === label || event.target === query) return;
     const target = getCard(card.id);
@@ -58,11 +69,12 @@ export function build(card, el, body) {
   });
 
   text.append(label, query);
-  face.append(pin, text);
+  face.append(pin, text, go);
   body.appendChild(face);
 
   el.__placeLabel = label;
   el.__placeQuery = query;
+  el.__placeOpen = go;
 }
 
 export function update(card, el) {
@@ -74,7 +86,9 @@ export function update(card, el) {
     el.__placeQuery.value = card.query || "";
   }
 
-  el.classList.toggle("is-openable", !!mapsUrlFor(card.query));
+  const openable = !!mapsUrlFor(card.query);
+  el.classList.toggle("is-openable", openable);
+  el.__placeOpen.disabled = !openable;
 }
 
 function bindField(input, cardId, key) {

@@ -216,6 +216,29 @@ The colour tool calls `render()` directly rather than going through the store's
 render hook, because dragging around the colour wheel fires continuously and
 rebuilding the chrome would rebuild the inspector the pointer is inside.
 
+### A gesture nothing advertises may as well not exist
+
+Links and places opened on double-click, and nobody found it. There was nothing
+on the card saying anything would happen — and the obvious thing to try, a
+single click on the address, has to keep putting the caret where you clicked,
+because the address is an editable field.
+
+So both now carry a visible button. Double-click still works for anyone who
+tries it, but it is a shortcut rather than the mechanism. The button disables
+itself when there is nothing valid to open.
+
+Same lesson as the board rename gesture: select-then-click was correct and
+undiscoverable. If a behaviour has no visible affordance, it needs one.
+
+### Two colours, each with one job
+
+The palette went cream to Milanote's white and grey. Alongside that, the
+selection colour became near-black rather than a hue.
+
+The rule worth keeping: **near-black means "selected", blue means "this goes
+somewhere"**. Nothing decorative uses blue, so it always means the same thing
+when it appears. The old accent was doing both jobs and neither was legible.
+
 ### Maps: build a URL, hand it over, fetch nothing
 
 Three options were weighed for a map card: a live tile map (Leaflet plus

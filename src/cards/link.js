@@ -44,8 +44,24 @@ export function build(card, el, body) {
   bindField(title, card.id, "title");
   bindField(url, card.id, "url");
 
-  // Double-click to open, matching places and boards. A single click has to
-  // stay free for selecting, and for putting the caret in either field.
+  /*
+   * A single click on an obvious button, because double-clicking the card
+   * announces itself to nobody. The card fields are inputs, so clicking those
+   * has to keep putting the caret where you clicked — which leaves nothing on
+   * the card that reads as "this goes somewhere" unless we add it.
+   */
+  const go = document.createElement("button");
+  go.type = "button";
+  go.className = "ref-open";
+  go.textContent = "↗";
+  go.title = "Open in your browser";
+  go.setAttribute("aria-label", "Open link in your browser");
+  go.addEventListener("click", () => {
+    const target = getCard(card.id);
+    if (target) openLink(target);
+  });
+
+  // Kept as a shortcut for anyone who tries it.
   face.addEventListener("dblclick", (event) => {
     if (event.target === title || event.target === url) return;
     const target = getCard(card.id);
@@ -53,11 +69,12 @@ export function build(card, el, body) {
   });
 
   text.append(title, url);
-  face.appendChild(text);
+  face.append(text, go);
   body.appendChild(face);
 
   el.__linkTitle = title;
   el.__linkUrl = url;
+  el.__linkOpen = go;
 }
 
 export function update(card, el) {
@@ -69,7 +86,9 @@ export function update(card, el) {
     el.__linkUrl.value = card.url || "";
   }
 
-  el.classList.toggle("is-openable", isWebUrl(normaliseUrl(card.url)));
+  const openable = isWebUrl(normaliseUrl(card.url));
+  el.classList.toggle("is-openable", openable);
+  el.__linkOpen.disabled = !openable;
 }
 
 function bindField(input, cardId, key) {
