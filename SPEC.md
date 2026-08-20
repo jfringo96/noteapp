@@ -40,7 +40,8 @@ one of these, take the simpler path instead.
 - Zoom. The canvas is fixed-scale.
 - Infinite canvas. It's a fixed 5000×5000px area inside a scrollable container.
 - Rich text. No bold, italic, fonts, colours, or headings inside cards.
-- Connector arrows between cards.
+- Connector arrows between cards. (Free-standing lines and arrows are a
+  different thing and are built — they are not attached to anything.)
 - Link preview cards that scrape metadata.
 - Multi-select or marquee selection.
 - Snapping or alignment guides.
@@ -384,6 +385,11 @@ sitting on the board, not as another sheet of paper.
 
 Inside a column the same card becomes a row: thumbnail on the left, name and
 count stacked beside it.
+
+**line** — a stroke drawn point to point, with or without an arrowhead. Colour,
+thickness and a dashed option, all in the inspector. Dragged out rather than
+placed by clicking, so it has its own **Draw** button in the rail rather than
+appearing in the card picker. Not a connector: it is not attached to anything.
 
 **column** — a titled stack of other cards, with a permanent count that reads
 "3 boards, 1 card" rather than lumping them together, and a collapse toggle. Drag cards in from the canvas, drag them up and down inside it

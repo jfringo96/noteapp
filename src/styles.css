@@ -1364,3 +1364,77 @@ html, body {
 /* A card type being dragged out of the left rail. */
 .tool.is-dragging { opacity: .5; }
 .tool.is-draggable { cursor: grab; }
+
+/* ----------------------------------------------------------------- lines */
+
+/*
+ * A line has no paper and no shadow — it is a stroke on the board, not a card
+ * sitting on it. The box is only there to give the SVG a coordinate space.
+ *
+ * Nothing in it takes the pointer except the fat transparent stroke lying under
+ * the visible one, so you click near the LINE rather than near its bounding
+ * box — which for a diagonal is mostly empty space.
+ */
+.card-line {
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.card-line.is-selected { box-shadow: none; }
+.card-line .card-grip,
+.card-line .card-resize { display: none; }
+
+.line-svg { width: 100%; height: 100%; overflow: visible; }
+.line-grab { pointer-events: stroke; cursor: grab; }
+.card-line.is-dragging .line-grab { cursor: grabbing; }
+.line-stroke,
+.line-head { pointer-events: none; }
+
+/* Selecting a line rings it by showing its ends, not by drawing a box round
+   the empty rectangle it lives in. */
+.line-handle {
+  fill: var(--paper);
+  stroke: var(--accent);
+  stroke-width: 2;
+  pointer-events: none;
+  opacity: 0;
+  cursor: grab;
+}
+
+.card-line.is-selected .line-handle { opacity: 1; pointer-events: all; }
+.card-line.is-selected .line-stroke { filter: drop-shadow(0 0 2px rgb(35 41 53 / 0.45)); }
+
+/* The line being drawn, before it is a card. */
+.draw-preview {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 400;
+}
+
+.draw-preview-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+}
+
+/* Armed and waiting for a drag. */
+.canvas.is-arming { cursor: crosshair; }
+
+/* The weight tool draws the thickness it will apply. */
+.tool-weight::after {
+  content: "";
+  display: block;
+  width: 16px;
+  height: var(--weight, 2px);
+  background: currentColor;
+  border-radius: 2px;
+}
+
+/* A menu row that leads with an icon. */
+.menu-item-icon { gap: .55rem; }
+.menu-item-icon svg { flex: 0 0 auto; color: var(--muted); }

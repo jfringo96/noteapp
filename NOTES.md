@@ -694,6 +694,54 @@ that had to be stopped at the cards — a card is not the canvas — and text fi
 inside them had to be given their caret back explicitly. Pictures, which drag
 from anywhere on the card, get `grab` on purpose.
 
+### Lines and arrows are cards, but not connectors
+
+`SPEC.md` rules out connector arrows between cards, and it still does. A line
+here is a free-standing stroke: it is not attached to anything, moving a card
+near it does not drag it along, and it has no idea what it is pointing at. That
+is a different feature that happens to look similar, and keeping them apart is
+what stops this growing into an anchor model.
+
+Being a card is where all the leverage is — undo, saving, z-order, dragging and
+deletion all come free.
+
+**The geometry is the interesting part.** A line keeps the ordinary `x, y, w, h`
+box every card has, and runs along one of its two diagonals; `dir` says which.
+So dragging a line is just dragging its box, with no special case anywhere in
+`gestures.js`. `reversed` says the arrowhead sits on the first corner rather
+than the second, which is what lets a line drawn right-to-left point the way it
+was drawn.
+
+Deciding `reversed` has to compare BOTH axes against the canonical corner. The
+first version compared x alone and got every vertical line wrong — dragged
+upwards, the end and the corner share an x, and the arrow appeared at the bottom
+having been drawn to the top. Eight directions are now a test.
+
+**The hit area is the other one.** A line is a thin diagonal across a rectangle
+that is mostly empty, so the box is the wrong thing to click. Everything is
+`pointer-events: none` except a 16px transparent stroke lying under the visible
+one — you click near the line, not near its bounding box — and that same stroke
+is what carries the drag.
+
+Selecting shows the two ends as handles rather than ringing the box, for the
+reason board cards ring their thumbnail: outlining mostly-empty space reads as
+a bug. Dragging an end moves pixels and commits once, like every other gesture.
+
+The arrowhead is a path rather than an SVG marker, because a marker inherits the
+stroke width and comes out a different size at every weight.
+
+### Three icons that had to be drawn
+
+The rail is text glyphs, which keeps it in one typeface and one weight for
+nothing. Link was `↗`, which reads as "opens elsewhere" rather than "a link";
+the conventional mark is a paperclip and there is no character for one worth
+using — the emoji is coloured and shouts.
+
+So `icons.js` has three SVGs: a paperclip, a line and an arrow. Built with
+`createElementNS` rather than an innerHTML string, so none of it can ever become
+somewhere markup gets injected. `tool()` takes a Node or a string, and
+everything else stays a glyph.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

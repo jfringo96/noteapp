@@ -24,6 +24,8 @@ import {
 import { moveCard } from "./move.js";
 import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
+import { arrowIcon, lineIcon } from "./icons.js";
+import { menuItem } from "./panel.js";
 import { initConfirm, isConfirmOpen } from "./confirm.js";
 import { deleteBoardWithPrompt } from "./deleteboard.js";
 import { initGalleryPanel, refreshGallery, toggleGallery } from "./gallerypanel.js";
@@ -33,7 +35,9 @@ import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail }
 
 import {
   addImageFiles,
+  armDrawing,
   createBoardCard,
+  disarmDrawing,
   focusNewCard,
   hidePicker,
   initCanvas,
@@ -154,7 +158,13 @@ initFileMenu($("fileMenu"), $("fileBtn"));
 // `repaint` is the plain render, not the store hook: dragging around the colour
 // wheel fires continuously, and there is no need to rebuild the chrome — which
 // includes the inspector the pointer is currently inside — on every step.
-initInspector({ element: $("inspector"), repaint: render, status: setStatus, add: addAtCentre });
+initInspector({
+  element: $("inspector"),
+  repaint: render,
+  status: setStatus,
+  add: addAtCentre,
+  draw: openDrawMenu,
+});
 initLightbox($("lightbox"));
 
 setDropHandlers({
@@ -326,6 +336,8 @@ window.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape") {
     hideMap();
+    closeDrawMenu();
+    disarmDrawing();
     return;
   }
 

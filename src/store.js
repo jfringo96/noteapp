@@ -20,6 +20,8 @@ import {
   HISTORY_LIMIT,
   HOME_ID,
   HOME_TITLE,
+  LINE_COLOUR,
+  LINE_WIDTH_DEFAULT,
   MIN_SIZE,
   uid,
 } from "./constants.js";
@@ -266,6 +268,18 @@ export function makeCard(type, x, y, extra) {
   if (type === "board") {
     card.targetBoardId = null;
     card.accent = null;
+  }
+
+  if (type === "line") {
+    // The box and which diagonal it runs along; see cards/line.js.
+    Object.assign(card, {
+      dir: "nw-se",
+      reversed: false,
+      head: "none",
+      stroke: LINE_COLOUR,
+      thickness: LINE_WIDTH_DEFAULT,
+      dashed: false,
+    });
   }
 
   // A column owns its items outright — they are full cards living in this

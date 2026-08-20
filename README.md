@@ -156,6 +156,16 @@ which boards are using it first. Ctrl+Z undoes any of it.
 *Dragging an image out of a web page won't work: that hands over a web address,
 and Noteapp never goes online. Copy the picture and paste it instead.*
 
+## Drawing
+
+**Draw** in the rail offers a **line** or an **arrow**. Pick one and drag on the
+board to draw it point to point. Click a line to select it — the two ends become
+handles you can drag — and the rail offers its colour, thickness, a dashed
+option, whether it has an arrowhead, and delete.
+
+Lines aren't attached to anything. They're strokes on the board, not connectors
+between cards.
+
 ## Getting around a board
 
 Drag empty space to move the board around. Clicking empty space still deselects,

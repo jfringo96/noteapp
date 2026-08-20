@@ -14,6 +14,23 @@ export const IMAGE_CARD_EDGE = 300;
 
 export const CARD_TYPES = ["text", "list", "image", "link", "place", "board", "column"];
 
+/**
+ * Lines are a card type, but not one of the above.
+ *
+ * `CARD_TYPES` is what the rail and the double-click picker offer, and a line
+ * is not placed by clicking — it is dragged out point to point. It gets its own
+ * Draw button instead, and never appears in a list of things to drop.
+ */
+export const LINE_TYPE = "line";
+
+/** How a line is drawn: its own colour, weight and dash, not a card tint. */
+export const LINE_COLOUR = "#2b3240";
+export const LINE_WIDTHS = [1, 2, 3, 5, 8];
+export const LINE_WIDTH_DEFAULT = 2;
+
+/** Below this, a drag was a click that wobbled rather than a line. */
+export const LINE_MIN_LENGTH = 12;
+
 export const TYPE_LABEL = {
   text: "Text",
   list: "List",
@@ -22,6 +39,7 @@ export const TYPE_LABEL = {
   place: "Place",
   board: "Board",
   column: "Column",
+  line: "Line",
 };
 
 export const TYPE_GLYPH = {
@@ -32,6 +50,7 @@ export const TYPE_GLYPH = {
   place: "◎",
   board: "▢",
   column: "▥",
+  line: "╱",
 };
 
 /**
@@ -83,8 +102,13 @@ export const ACCENTABLE = ["text", "list", "link", "place", "column"];
  */
 export const COLOURABLE = ["text", "list", "link", "place", "column", "board"];
 
-/** Boards are a fixed-size tile, like Milanote. Nothing to drag bigger. */
-export const NO_RESIZE = ["board"];
+/**
+ * Boards are a fixed-size tile, like Milanote. Nothing to drag bigger.
+ *
+ * A line has no resize handle either — it is resized by dragging either end,
+ * which is the same thing said in the shape of the object.
+ */
+export const NO_RESIZE = ["board", "line"];
 
 /** What the colour picker opens on before a card has been tinted. */
 export const ACCENT_DEFAULT = "#e8dfcc";
@@ -97,6 +121,7 @@ export const MIN_SIZE = {
   place: { w: 150, h: 66 },
   board: { w: 78, h: 130 },
   column: { w: 200, h: 140 },
+  line: { w: 1, h: 1 },
 };
 
 export const DEFAULT_SIZE = {
@@ -110,6 +135,9 @@ export const DEFAULT_SIZE = {
   // `normalise()` in store.js, which holds existing cards to it too.
   board: { w: 98, h: 152 },
   column: { w: 270, h: 340 },
+  // Never used to place one — a line's box comes from the drag that drew it —
+  // but makeCard reads this for every type.
+  line: { w: 160, h: 100 },
 };
 
 export const uid = (prefix) => prefix + "_" + Math.random().toString(36).slice(2, 9);

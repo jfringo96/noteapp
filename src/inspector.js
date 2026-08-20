@@ -10,7 +10,17 @@
  * empty when nothing is selected.
  */
 
-import { ACCENT_DEFAULT, CARD_TYPES, COLOURABLE, TYPE_GLYPH, TYPE_LABEL } from "./constants.js";
+import {
+  ACCENT_DEFAULT,
+  CARD_TYPES,
+  COLOURABLE,
+  LINE_COLOUR,
+  LINE_WIDTHS,
+  LINE_WIDTH_DEFAULT,
+  TYPE_GLYPH,
+  TYPE_LABEL,
+} from "./constants.js";
+import { arrowIcon, drawIcon, lineIcon, linkIcon } from "./icons.js";
 import {
   applyChange,
   commitEdit,
@@ -31,12 +41,14 @@ let panel = null;
 let repaint = () => {};
 let onStatus = () => {};
 let onAdd = () => {};
+let onDraw = () => {};
 
-export function initInspector({ element, repaint: repaintFn, status, add }) {
+export function initInspector({ element, repaint: repaintFn, status, add, draw }) {
   panel = element;
   repaint = repaintFn || (() => {});
   onStatus = status || (() => {});
   onAdd = add || (() => {});
+  onDraw = draw || (() => {});
 }
 
 export function refreshInspector() {
@@ -56,6 +68,8 @@ export function refreshInspector() {
     for (const type of CARD_TYPES) {
       panel.appendChild(addTool(type));
     }
+
+    panel.appendChild(drawTool());
     return;
   }
 
@@ -63,6 +77,14 @@ export function refreshInspector() {
   if (card.type === "list") panel.appendChild(listStyleTool(card));
   if (card.type === "link") panel.appendChild(openLinkTool(card));
   if (card.type === "place") panel.appendChild(openPlaceTool(card));
+
+  if (card.type === "line") {
+    panel.appendChild(lineColourTool(card));
+    panel.appendChild(lineWeightTool(card));
+    panel.appendChild(lineDashTool(card));
+    panel.appendChild(lineHeadTool(card));
+    panel.appendChild(deleteCardTool(card));
+  }
 
   if (card.type === "image") {
     panel.appendChild(deleteThisTool(card));
@@ -81,6 +103,113 @@ export function refreshInspector() {
 }
 
 /* ----------------------------------------------------------------- tools --- */
+
+/* --------------------------------------------------------------- drawing --- */
+
+/**
+ * Draw opens the two things you can draw rather than being a card type.
+ *
+ * A line isn't placed by clicking somewhere — it is dragged out point to
+ * point — so it has no business in a list of things to drop on the board.
+ */
+function drawTool() {
+  const button = tool("Draw", drawIcon(), () => onDraw());
+  button.title = "Draw a line or an arrow";
+  return button;
+}
+
+function lineColourTool(card) {
+  const wrap = document.createElement("label");
+  wrap.className = "tool";
+  wrap.title = "Line colour";
+
+  const icon = document.createElement("span");
+  icon.className = "tool-icon tool-swatch";
+  icon.style.background = card.stroke || LINE_COLOUR;
+
+  const input = document.createElement("input");
+  input.type = "color";
+  input.className = "tool-colour";
+  input.value = card.stroke || LINE_COLOUR;
+  input.setAttribute("aria-label", "Line colour");
+
+  input.addEventListener("input", () => {
+    const target = getCard(card.id);
+    if (!target) return;
+
+    stashEdit();
+    target.stroke = input.value;
+    icon.style.background = input.value;
+    repaint();
+    touch();
+  });
+
+  input.addEventListener("change", commitEdit);
+
+  const text = document.createElement("span");
+  text.className = "tool-label";
+  text.textContent = "Colour";
+
+  wrap.append(icon, input, text);
+  return wrap;
+}
+
+/** Cycles the weights rather than opening a menu for five numbers. */
+function lineWeightTool(card) {
+  const current = card.thickness || LINE_WIDTH_DEFAULT;
+
+  const button = tool("Weight", "▬", () => {
+    applyChange(() => {
+      const target = getCard(card.id);
+      if (!target) return;
+
+      const at = LINE_WIDTHS.indexOf(target.thickness || LINE_WIDTH_DEFAULT);
+      target.thickness = LINE_WIDTHS[(at + 1) % LINE_WIDTHS.length];
+    });
+  });
+
+  button.title = `Thickness — ${current}px, click for the next`;
+
+  // The icon is the weight it will draw, which says more than a number.
+  const icon = button.querySelector(".tool-icon");
+  icon.textContent = "";
+  icon.style.setProperty("--weight", `${current}px`);
+  icon.classList.add("tool-weight");
+
+  return button;
+}
+
+function lineDashTool(card) {
+  const dashed = !!card.dashed;
+
+  return tool(dashed ? "Solid" : "Dashed", dashed ? "─" : "┄", () => {
+    applyChange(() => {
+      const target = getCard(card.id);
+      if (target) target.dashed = !target.dashed;
+    });
+  });
+}
+
+function lineHeadTool(card) {
+  const arrow = card.head === "arrow";
+
+  const button = tool(arrow ? "Plain" : "Arrow", arrow ? lineIcon() : arrowIcon(), () => {
+    applyChange(() => {
+      const target = getCard(card.id);
+      if (target) target.head = target.head === "arrow" ? "none" : "arrow";
+    });
+  });
+
+  button.title = arrow ? "Take the arrowhead off" : "Put an arrowhead on it";
+  return button;
+}
+
+/** Lines have no grip, so their delete lives here. */
+function deleteCardTool(card) {
+  const button = tool("Delete", "×", () => deleteCard(card.id));
+  button.classList.add("tool-danger");
+  return button;
+}
 
 /* ------------------------------------------------------- deleting a picture --- */
 
@@ -158,7 +287,8 @@ export const CARD_DRAG_TYPE = "application/x-noteapp-cardtype";
  * picture.
  */
 function addTool(type) {
-  const button = tool(TYPE_LABEL[type], TYPE_GLYPH[type], () => onAdd(type));
+  const glyph = type === "link" ? linkIcon() : TYPE_GLYPH[type];
+  const button = tool(TYPE_LABEL[type], glyph, () => onAdd(type));
 
   if (type === "image") {
     button.title = "Pictures in this collection";
@@ -188,7 +318,11 @@ function tool(label, glyph, onClick) {
 
   const icon = document.createElement("span");
   icon.className = "tool-icon";
-  icon.textContent = glyph;
+
+  // Most tools are a text glyph, which keeps the rail in one typeface. The few
+  // with no honest character hand over an SVG node instead.
+  if (glyph instanceof Node) icon.appendChild(glyph);
+  else icon.textContent = glyph;
 
   const text = document.createElement("span");
   text.className = "tool-label";

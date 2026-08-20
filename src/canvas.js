@@ -13,6 +13,7 @@ import {
   CARD_TYPES,
   DEFAULT_SIZE,
   IMAGE_CARD_EDGE,
+  LINE_MIN_LENGTH,
   TYPE_LABEL,
   clamp,
 } from "./constants.js";
@@ -23,6 +24,7 @@ import { IMAGE_DRAG_TYPE, galleryOffset } from "./gallerypanel.js";
 import { addToGallery, galleryEntry } from "./gallery.js";
 import { CARD_DRAG_TYPE } from "./inspector.js";
 import { buildCard, updateCard } from "./cards/index.js";
+import { fromPoints } from "./cards/line.js";
 import { initDrop } from "./drop.js";
 import { imageFilesFrom, importImage } from "./images.js";
 
@@ -56,6 +58,13 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
   canvas.addEventListener("pointerdown", (event) => {
     if (event.target !== canvas) return;
     hidePicker();
+
+    if (isArmed() && event.button === 0) {
+      event.preventDefault();
+      startDrawing(event);
+      return;
+    }
+
     select(null);
     startPan(event);
   });
@@ -476,6 +485,98 @@ function startPan(event) {
     window.removeEventListener("pointerup", stop);
     window.removeEventListener("pointercancel", stop);
     canvas.classList.remove("is-panning");
+  };
+
+  window.addEventListener("pointermove", move, { passive: false });
+  window.addEventListener("pointerup", stop);
+  window.addEventListener("pointercancel", stop);
+}
+
+/* ------------------------------------------------------------------ draw --- */
+
+/**
+ * Drawing a line, point to point.
+ *
+ * Picking Line or Arrow arms the canvas; the next drag on empty space draws
+ * one and disarms it. One line per pick, deliberately — a mode you can forget
+ * you are in is a mode that eats your next click.
+ *
+ * The preview is a plain SVG laid over the canvas rather than a real card,
+ * because a card that existed during the drag would be in the undo stack the
+ * moment you changed your mind.
+ */
+let armedHead = null;
+let preview = null;
+
+export function armDrawing(head) {
+  armedHead = head;
+  canvas.classList.add("is-arming");
+  return true;
+}
+
+export function disarmDrawing() {
+  armedHead = null;
+  canvas.classList.remove("is-arming");
+  removePreview();
+}
+
+export const isArmed = () => armedHead !== null;
+
+function removePreview() {
+  if (preview) preview.remove();
+  preview = null;
+}
+
+function startDrawing(event) {
+  const head = armedHead;
+  const from = canvasPoint(event.clientX, event.clientY);
+
+  const NS = "http://www.w3.org/2000/svg";
+  preview = document.createElementNS(NS, "svg");
+  preview.setAttribute("class", "draw-preview");
+
+  const stroke = document.createElementNS(NS, "line");
+  stroke.setAttribute("class", "draw-preview-line");
+  preview.appendChild(stroke);
+  canvas.appendChild(preview);
+
+  const move = (moveEvent) => {
+    moveEvent.preventDefault();
+    const to = canvasPoint(moveEvent.clientX, moveEvent.clientY);
+
+    stroke.setAttribute("x1", String(from.x));
+    stroke.setAttribute("y1", String(from.y));
+    stroke.setAttribute("x2", String(clamp(to.x, 0, CANVAS_SIZE)));
+    stroke.setAttribute("y2", String(clamp(to.y, 0, CANVAS_SIZE)));
+  };
+
+  const stop = (upEvent) => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+
+    removePreview();
+    disarmDrawing();
+
+    const to = canvasPoint(upEvent.clientX, upEvent.clientY);
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    // A click, or a click that wobbled. Drawing a zero-length line would leave
+    // an invisible card on the board.
+    if (Math.hypot(dx, dy) < LINE_MIN_LENGTH) {
+      onImportError("Drag to draw a line — a click on its own doesn't make one.");
+      return;
+    }
+
+    const fields = fromPoints(
+      clamp(from.x, 0, CANVAS_SIZE),
+      clamp(from.y, 0, CANVAS_SIZE),
+      clamp(to.x, 0, CANVAS_SIZE),
+      clamp(to.y, 0, CANVAS_SIZE)
+    );
+
+    addCard("line", fields.x, fields.y, { ...fields, head });
   };
 
   window.addEventListener("pointermove", move, { passive: false });

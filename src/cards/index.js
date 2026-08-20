@@ -24,8 +24,9 @@ import * as link from "./link.js";
 import * as place from "./place.js";
 import * as board from "./board.js";
 import * as column from "./column.js";
+import * as line from "./line.js";
 
-const TYPES = { text, list, image, link, place, board, column };
+const TYPES = { text, list, image, link, place, board, column, line };
 
 // Columns render their contents with the same builder that renders the canvas.
 // Injected rather than imported, because column.js is imported here — a plain
@@ -101,7 +102,9 @@ export function buildCard(card, scroller, options = {}) {
   // select, and on a picture the grip is an overlay you have to find first.
   // Everything with editable text keeps the grip, so dragging never fights
   // selecting a word.
-  const surface = WHOLE_CARD_DRAG.includes(card.type) ? el : grip;
+  // A line hands over its own surface: the fat transparent stroke along it,
+  // because its bounding box is mostly empty space either side of a diagonal.
+  const surface = el.__dragSurface || (WHOLE_CARD_DRAG.includes(card.type) ? el : grip);
   attachDrag(surface, el, card.id, scroller, { lifted: inColumn });
 
   return el;
