@@ -132,9 +132,12 @@ Explorer. That works precisely because a collection is just a folder.
 
 ## Pictures
 
-**Image** in the left rail opens the collection's **gallery** — every picture it
-holds, whether a board is using it or not. Drag one out onto a board to place it
-where you want.
+**Image** in the left rail slides out the collection's **gallery** — every
+picture it holds, whether a board is using it or not. It stays open while you
+work, so you can place several in a row; press Image again to close it.
+
+**Click a picture** to drop it in the middle of the view, or **drag it** onto the
+board to put it exactly where you want.
 
 Add pictures with **Add pictures…**, or just drop them straight onto a board;
 either way they end up in the gallery. Copying a picture from anywhere and

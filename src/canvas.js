@@ -19,7 +19,7 @@ import {
 import { addCard, currentBoard, getSelectedId, select } from "./store.js";
 import { addBoardCard, linkBoard } from "./boards.js";
 import { BOARD_DRAG_TYPE } from "./map.js";
-import { IMAGE_DRAG_TYPE } from "./gallerypanel.js";
+import { IMAGE_DRAG_TYPE, galleryOffset } from "./gallerypanel.js";
 import { addToGallery, galleryEntry } from "./gallery.js";
 import { CARD_DRAG_TYPE } from "./inspector.js";
 import { buildCard, updateCard } from "./cards/index.js";
@@ -256,11 +256,26 @@ function initDropTarget() {
  * Centred on the pointer, like every other drop, and clamped so a tile aimed
  * at the edge of the canvas doesn't end up half outside it.
  */
+export function placeGalleryImage(imageId) {
+  const entry = galleryEntry(imageId);
+  if (!entry) return false;
+
+  // The middle of what you can see, which is not the middle of the scroller
+  // while the gallery drawer is covering its left-hand side.
+  const covered = galleryOffset();
+  const centre = {
+    x: scroller.scrollLeft + covered + (scroller.clientWidth - covered) / 2,
+    y: scroller.scrollTop + scroller.clientHeight / 2,
+  };
+
+  return dropGalleryImage(imageId, centre.x, centre.y);
+}
+
 function dropGalleryImage(imageId, x, y) {
   const entry = galleryEntry(imageId);
   if (!entry) {
     onImportError("That picture is no longer in the gallery.");
-    return;
+    return false;
   }
 
   const size = cardSizeFor(entry);
@@ -278,6 +293,8 @@ function dropGalleryImage(imageId, x, y) {
       ...size,
     }
   );
+
+  return true;
 }
 
 /** Fits a gallery picture into a sensible card without distorting it. */
@@ -343,6 +360,14 @@ function chooseImageFiles(x, y) {
  * and pushes a history entry, and a predictable left-to-right order is worth
  * more here than finishing a few milliseconds sooner.
  */
+/**
+ * `x, y` is where the pointer was, and the picture lands CENTRED on it.
+ *
+ * It used to become the card's top-left corner, which put every dropped photo
+ * down and to the right of where it was aimed — by half a card, which is a lot
+ * for a 280px image. Everything else dropped on the canvas centres on the
+ * pointer, and this is the one that didn't.
+ */
 export async function addImageFiles(files, x, y) {
   let offset = 0;
 
@@ -359,11 +384,14 @@ export async function addImageFiles(files, x, y) {
       // in the gallery are the same import either way round.
       addToGallery(fields, file.name || "");
 
-      addCard("image", clamp(x + offset, 0, CANVAS_SIZE - fields.w), y, {
-        ...fields,
-        alt: file.name || "",
-      });
+      addCard(
+        "image",
+        clamp(x - fields.w / 2 + offset, 0, CANVAS_SIZE - fields.w),
+        clamp(y - fields.h / 2 + offset, 0, CANVAS_SIZE - fields.h),
+        { ...fields, alt: file.name || "" }
+      );
 
+      // Several at once fan out from the drop rather than stacking exactly.
       offset += 24;
     } catch (err) {
       onImportError(`Could not import ${file.name}: ${err.message}`);

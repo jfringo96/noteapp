@@ -1,13 +1,17 @@
 /**
- * The gallery panel: every picture in the collection, to drag onto a board.
+ * The gallery: every picture in the collection, in a drawer beside the rail.
  *
- * Opens from Image in the left rail. Clicking Image used to drop a card on the
- * canvas straight from a file dialog, which made a picture something you added
- * to one board rather than something the collection had.
+ * It slides out from the left rail rather than covering the screen, and that is
+ * load-bearing rather than decorative. A picture is dragged out of here onto a
+ * board, and **hiding the drag source cancels the drag** — a panel that had to
+ * get out of the way before you could drop anything could never be dragged from
+ * at all. Sitting beside the board instead means it can simply stay put.
  *
- * Nothing here places a card by clicking. Pictures are dragged out and dropped
- * where you want them, which is the same gesture as dragging a board out of the
- * Map and, more to the point, the only one that lets you choose where it lands.
+ * It also means the drawer can stay open while you place several pictures,
+ * which is what you are usually doing.
+ *
+ * Two ways to place one: click it and it lands in the middle of the view, or
+ * drag it and it lands where you drop it.
  */
 
 import { boardsUsing, galleryImages, removeFromGallery } from "./gallery.js";
@@ -17,36 +21,52 @@ import { imageUrl } from "./images.js";
 /** How a picture dragged out of the gallery identifies itself to the canvas. */
 export const IMAGE_DRAG_TYPE = "application/x-noteapp-image";
 
-let backdrop = null;
+let drawer = null;
 let onStatus = () => {};
 let onUpload = () => {};
+let onPlace = () => false;
 
-export function initGalleryPanel(element, { status, upload }) {
-  backdrop = element;
+export function initGalleryPanel(element, { status, upload, place }) {
+  drawer = element;
   onStatus = status || (() => {});
   onUpload = upload || (() => {});
-
-  backdrop.addEventListener("pointerdown", (event) => {
-    if (event.target === backdrop) close();
-  });
+  onPlace = place || (() => false);
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isGalleryOpen()) {
       event.preventDefault();
-      close();
+      closeGallery();
     }
   });
 }
 
-export const isGalleryOpen = () => backdrop && !backdrop.hidden;
+export const isGalleryOpen = () => !!drawer && drawer.classList.contains("is-open");
+
+/**
+ * How much of the board the drawer is covering, in pixels.
+ *
+ * The canvas needs this to work out where the middle of what you can SEE is.
+ * Without it, clicking a picture puts it in the middle of the scroller, and
+ * the left of the scroller is behind this drawer.
+ */
+export const galleryOffset = () => (isGalleryOpen() ? drawer.getBoundingClientRect().width : 0);
+
+/** The rail's Image button toggles, so pressing it again puts it away. */
+export function toggleGallery() {
+  if (isGalleryOpen()) closeGallery();
+  else openGallery();
+}
 
 export function openGallery() {
   build();
-  backdrop.hidden = false;
+  drawer.classList.add("is-open");
+  drawer.removeAttribute("aria-hidden");
 }
 
-export function close() {
-  if (backdrop) backdrop.hidden = true;
+export function closeGallery() {
+  if (!drawer) return;
+  drawer.classList.remove("is-open");
+  drawer.setAttribute("aria-hidden", "true");
 }
 
 /** Rebuild in place — after an upload, or after a picture is deleted. */
@@ -55,11 +75,6 @@ export function refreshGallery() {
 }
 
 function build() {
-  const panel = document.createElement("div");
-  panel.className = "gallery";
-  panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", "Pictures in this collection");
-
   const head = document.createElement("div");
   head.className = "gallery-head";
 
@@ -67,26 +82,25 @@ function build() {
   title.className = "gallery-title";
   title.textContent = "Pictures";
 
-  const hint = document.createElement("span");
+  const done = document.createElement("button");
+  done.type = "button";
+  done.className = "gallery-close";
+  done.textContent = "×";
+  done.title = "Close";
+  done.setAttribute("aria-label", "Close the gallery");
+  done.addEventListener("click", closeGallery);
+
+  head.append(title, done);
+
+  const hint = document.createElement("p");
   hint.className = "gallery-hint";
-  hint.textContent = "Drag one onto the board";
+  hint.textContent = "Click to place one, or drag it where you want it.";
 
   const add = document.createElement("button");
   add.type = "button";
   add.className = "gallery-add";
   add.textContent = "Add pictures…";
   add.addEventListener("click", () => onUpload());
-
-  const done = document.createElement("button");
-  done.type = "button";
-  done.className = "gallery-close";
-  done.textContent = "×";
-  done.title = "Close";
-  done.setAttribute("aria-label", "Close");
-  done.addEventListener("click", close);
-
-  head.append(title, hint, add, done);
-  panel.appendChild(head);
 
   const grid = document.createElement("div");
   grid.className = "gallery-grid";
@@ -103,14 +117,15 @@ function build() {
 
   for (const entry of images) grid.appendChild(tile(entry));
 
-  panel.appendChild(grid);
-
-  backdrop.replaceChildren(panel);
+  drawer.replaceChildren(head, hint, add, grid);
 }
 
 function tile(entry) {
   const figure = document.createElement("div");
   figure.className = "gallery-tile";
+  figure.tabIndex = 0;
+  figure.setAttribute("role", "button");
+  figure.title = entry.name || "Click to place, or drag onto the board";
 
   const img = document.createElement("img");
   img.className = "gallery-image";
@@ -125,20 +140,38 @@ function tile(entry) {
     else figure.classList.add("is-missing");
   });
 
+  const place = () => {
+    if (onPlace(entry.imageId)) onStatus("Added to this board");
+    else onStatus("That picture could not be placed.");
+  };
+
+  figure.addEventListener("click", place);
+
+  figure.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      place();
+    }
+  });
+
   /*
-   * Drag it out and drop it on the canvas. Only the id travels — the canvas
-   * looks the rest up in the gallery, so the picture is never carried around
-   * as bytes and dropping the same one twice costs nothing.
+   * Drag it out and drop it where you want it. Only the id travels — the canvas
+   * looks the rest up in the gallery, so the picture is never carried around as
+   * bytes and dropping the same one twice costs nothing.
+   *
+   * Nothing is hidden here. Hiding the element being dragged cancels the drag,
+   * which is what stopped this working when the gallery covered the screen.
    */
   figure.draggable = true;
 
   figure.addEventListener("dragstart", (event) => {
     event.dataTransfer.setData(IMAGE_DRAG_TYPE, entry.imageId);
     event.dataTransfer.effectAllowed = "copy";
-    figure.classList.add("is-dragging");
 
-    // Otherwise the panel is sitting over the board being dropped onto.
-    close();
+    // Drag the picture itself rather than the tile with its delete button on.
+    if (img.naturalWidth) event.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
+
+    figure.classList.add("is-dragging");
   });
 
   figure.addEventListener("dragend", () => figure.classList.remove("is-dragging"));
@@ -156,7 +189,7 @@ function deleteButton(entry) {
   remove.setAttribute("aria-label", "Delete this picture");
 
   remove.addEventListener("click", async (event) => {
-    // The tile is draggable and this button sits on it.
+    // The tile itself places the picture on click, and this button sits on it.
     event.stopPropagation();
 
     const used = boardsUsing(entry.imageId);
@@ -164,7 +197,8 @@ function deleteButton(entry) {
     // Nothing is using it, so there is nothing to warn about — asking would be
     // asking for the sake of it.
     if (used.length) {
-      const boards = used.length === 1 ? `on ${used[0]}` : `on ${used.length} boards: ${used.join(", ")}`;
+      const boards =
+        used.length === 1 ? `on ${used[0]}` : `on ${used.length} boards: ${used.join(", ")}`;
 
       const answer = await confirmDelete({
         title: "Delete this picture?",
@@ -178,9 +212,12 @@ function deleteButton(entry) {
     }
 
     removeFromGallery(entry.imageId);
+
     onStatus(
       used.length
-        ? `Deleted the picture, and removed it from ${used.length} board${used.length === 1 ? "" : "s"} — Ctrl+Z to undo`
+        ? `Deleted the picture, and removed it from ${used.length} board${
+            used.length === 1 ? "" : "s"
+          } — Ctrl+Z to undo`
         : "Deleted the picture — Ctrl+Z to undo"
     );
 

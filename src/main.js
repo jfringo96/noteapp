@@ -26,7 +26,7 @@ import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
 import { initConfirm, isConfirmOpen } from "./confirm.js";
 import { deleteBoardWithPrompt } from "./deleteboard.js";
-import { initGalleryPanel, isGalleryOpen, openGallery, refreshGallery } from "./gallerypanel.js";
+import { initGalleryPanel, refreshGallery, toggleGallery } from "./gallerypanel.js";
 import { addToGallery } from "./gallery.js";
 import { collectionName, initCollection } from "./collection.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
@@ -37,6 +37,7 @@ import {
   focusNewCard,
   hidePicker,
   initCanvas,
+  placeGalleryImage,
   refreshStacking,
   render,
   viewportCentre,
@@ -141,7 +142,11 @@ setHooks({
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
 initConfirm($("dialog"));
-initGalleryPanel($("gallery"), { status: setStatus, upload: uploadToGallery });
+initGalleryPanel($("gallery"), {
+  status: setStatus,
+  upload: uploadToGallery,
+  place: placeGalleryImage,
+});
 initMap($("map"), $("mapBtn"), setStatus);
 initFileMenu($("fileMenu"), $("fileBtn"));
 
@@ -258,7 +263,7 @@ function addAtCentre(type) {
   // collection, not to whichever board you happened to be on when you imported
   // it — so you pick from what's there, and drag it where you want.
   if (type === "image") {
-    openGallery();
+    toggleGallery();
     return;
   }
 
@@ -308,8 +313,6 @@ window.addEventListener("keydown", (event) => {
   // underneath. The dialog handles its own Escape.
   if (isConfirmOpen()) return;
 
-  // And the gallery, which is full of pictures you could be about to delete.
-  if (isGalleryOpen()) return;
 
   const mod = event.ctrlKey || event.metaKey;
 

@@ -567,6 +567,38 @@ had no `gallery` key at all — not when it has an empty one. On any later launc
 a file the gallery does not list is a picture that was deliberately deleted and
 is waiting to be swept, and adopting it would bring it back from the dead.
 
+### Hiding the drag source cancels the drag
+
+The gallery started as a sheet over the middle of the screen, and dragging a
+picture out of it did not work at all. The panel was covering the board, so
+`dragstart` closed it — and closing it removed the element being dragged, which
+Chromium treats as the drag being cancelled. The gesture died on the frame it
+started.
+
+Any panel you have to get out of the way before you can drop something can
+never be dragged from. So the gallery is a drawer beside the rail instead: it
+slides out over the left of the board, sits next to what you are dropping onto,
+and simply stays put. The layout was also what was asked for, but it is the
+only version that works.
+
+It stays open while you place several pictures, which is what you are usually
+doing, and the rail's Image button toggles it shut again.
+
+One consequence worth remembering: the drawer covers the left of the scroller,
+so "the middle of the view" is no longer the middle of the scroller. Clicking a
+picture asks the drawer how wide it is and centres on what is actually visible.
+
+### Everything dropped on the canvas centres on the pointer
+
+Dropped image files were the exception: the drop point became the card's
+top-left corner, which put every photo down and to the right of where it was
+aimed by half a card — 140px for a 280px image, which reads as the app being
+slightly wrong rather than as a rule you could learn.
+
+Board tiles, gallery pictures and card types dragged from the rail all centred
+already. Now files do too, and several at once fan out from the drop rather
+than stacking exactly on it.
+
 ### Dragging replaces clicking where the position matters
 
 Three things are dragged now that were not: a card type out of the left rail, a
