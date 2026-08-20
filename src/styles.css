@@ -1290,6 +1290,13 @@ html, body {
   overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  /*
+   * `start`, not the default `stretch`. This grid is a flex child filling the
+   * drawer, so with stretch its rows grow to share out all the leftover height
+   * — which put a tile-sized gap between every row and looked like a spacing
+   * bug rather than the alignment rule it is.
+   */
+  align-content: start;
   gap: .5rem;
   padding-bottom: .75rem;
 }

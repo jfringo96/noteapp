@@ -143,9 +143,15 @@ Add pictures with **Add pictures…**, or just drop them straight onto a board;
 either way they end up in the gallery. Copying a picture from anywhere and
 pasting it works too.
 
-A picture used on five boards is still one file. Deleting one from the gallery
-tells you which boards are using it first, and takes it off those boards as
-well — Ctrl+Z undoes it.
+A picture used on five boards is still one file.
+
+Select a picture on a board and the rail offers two deletes: **Delete** takes
+that copy off that board and leaves the picture in the gallery, and **Delete
+all** removes it from every board and from the collection. Delete all asks by
+turning into "Sure?" — click it again to confirm.
+
+Deleting from the gallery itself does the same as Delete all, and tells you
+which boards are using it first. Ctrl+Z undoes any of it.
 
 *Dragging an image out of a web page won't work: that hands over a web address,
 and Noteapp never goes online. Copy the picture and paste it instead.*

@@ -69,9 +69,28 @@ export function closeGallery() {
   drawer.setAttribute("aria-hidden", "true");
 }
 
-/** Rebuild in place — after an upload, or after a picture is deleted. */
-export function refreshGallery() {
-  if (isGalleryOpen()) build();
+let shownSignature = "";
+
+/**
+ * Keeps the drawer honest while it is open.
+ *
+ * Called on every state change, so it has to be cheap and it has to not
+ * flicker: rebuilding the grid on each keystroke would rebuild every <img>,
+ * and rebuilding it mid-drag would cancel the drag the same way hiding the
+ * panel used to. So it only rebuilds when the set of pictures has actually
+ * changed — which is exactly when a picture is dropped, pasted, added or
+ * deleted, and never when you are typing on a card.
+ */
+export function refreshGallery(force = false) {
+  if (!isGalleryOpen()) return;
+
+  const signature = galleryImages()
+    .map((entry) => entry.imageId)
+    .join(",");
+
+  if (!force && signature === shownSignature) return;
+
+  build();
 }
 
 function build() {
@@ -118,6 +137,7 @@ function build() {
   for (const entry of images) grid.appendChild(tile(entry));
 
   drawer.replaceChildren(head, hint, add, grid);
+  shownSignature = images.map((entry) => entry.imageId).join(",");
 }
 
 function tile(entry) {

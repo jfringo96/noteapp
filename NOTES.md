@@ -634,6 +634,49 @@ caret in it, and "Untitled board" is only applied on blur if nothing was typed.
 The placeholder says "Untitled board" too, so what you will get if you walk away
 is on screen before you walk away.
 
+### Two ways to delete a picture, without leaving the board
+
+Selecting a picture puts both in the rail:
+
+- **Delete** takes this copy off this board. The picture stays in the gallery.
+- **Delete all** removes it from every board, out of the gallery, and — at the
+  next launch — off the disk.
+
+"Delete all" is **armed**, not modal: the first click turns it into "Sure?", the
+second does it, and it disarms itself after a few seconds. The rule elsewhere is
+that a dialog is right when the answer needs a list attached — which boards go
+too, which nested boards go too. Here the question really is just "sure?", and a
+second click on the same button answers it without anything jumping in front of
+the board you are looking at. The same pattern the board delete used before it
+grew a checklist, kept where it still fits.
+
+The file still goes at the next restart rather than immediately, for the reason
+it always has: undo has to be able to bring the card back with its photograph
+still there. The status message says so rather than implying the disk is already
+clear.
+
+### The gallery grid was stretching its rows
+
+Rows had a tile-sized gap between them. Not spacing: `.gallery-grid` is a flex
+child filling the drawer, and a grid container with leftover height and the
+default `align-content: stretch` shares that height out among its auto-sized
+rows. Five pictures in a tall drawer meant a lot of leftover height.
+
+`align-content: start` and the rows sit where they should. Worth remembering
+for any grid that fills a flex column.
+
+### The drawer stays live, without rebuilding on every keystroke
+
+A picture dropped or pasted onto a board goes into the gallery, and the open
+drawer has to show it. The obvious fix — rebuild alongside the rest of the
+chrome — rebuilds every `<img>` on every state change, which flickers, and
+would rebuild mid-drag and cancel the drag exactly the way hiding the panel used
+to.
+
+So it compares the list of picture ids it is currently showing against the
+current one and only rebuilds when they differ. That is true precisely when a
+picture is added or deleted, and false while you are typing on a card.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

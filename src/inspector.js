@@ -22,6 +22,7 @@ import {
 } from "./store.js";
 import { setBoardCover } from "./boards.js";
 import { deleteBoardWithPrompt } from "./deleteboard.js";
+import { boardsUsing, removeFromGallery } from "./gallery.js";
 import { importImage } from "./images.js";
 import { openLink } from "./cards/link.js";
 import { openPlace } from "./cards/place.js";
@@ -63,6 +64,11 @@ export function refreshInspector() {
   if (card.type === "link") panel.appendChild(openLinkTool(card));
   if (card.type === "place") panel.appendChild(openPlaceTool(card));
 
+  if (card.type === "image") {
+    panel.appendChild(deleteThisTool(card));
+    panel.appendChild(deleteEverywhereTool(card));
+  }
+
   if (card.type === "board") {
     panel.appendChild(pictureTool(card));
     if (card.targetBoardId) panel.appendChild(clearPictureTool(card));
@@ -75,6 +81,70 @@ export function refreshInspector() {
 }
 
 /* ----------------------------------------------------------------- tools --- */
+
+/* ------------------------------------------------------- deleting a picture --- */
+
+/** Takes this copy off this board. The picture stays in the gallery. */
+function deleteThisTool(card) {
+  const button = tool("Delete", "×", () => {
+    deleteCard(card.id);
+    onStatus("Removed from this board — the picture is still in the gallery");
+  });
+
+  button.classList.add("tool-danger");
+  return button;
+}
+
+/**
+ * Deletes the picture itself: off every board, out of the gallery, and — at the
+ * next launch — off the disk.
+ *
+ * Armed rather than modal. The rule elsewhere is that destroying something asks
+ * first, and a dialog is right when the answer needs a list attached; here the
+ * question is just "sure?", and a second click on the same button answers it
+ * without anything jumping in front of the board.
+ *
+ * It disarms itself after a few seconds, so walking away can't leave a loaded
+ * button under the pointer.
+ */
+function deleteEverywhereTool(card) {
+  let armed = false;
+  let timer = null;
+
+  const button = tool("Delete all", "⊗", () => {
+    const label = button.querySelector(".tool-label");
+
+    if (!armed) {
+      armed = true;
+      button.classList.add("is-armed");
+
+      const used = boardsUsing(card.imageId).length;
+      label.textContent = "Sure?";
+      button.title = used > 1 ? `Delete this picture from all ${used} boards` : "Delete this picture";
+
+      timer = setTimeout(() => {
+        armed = false;
+        button.classList.remove("is-armed");
+        label.textContent = "Delete all";
+      }, 4000);
+
+      return;
+    }
+
+    clearTimeout(timer);
+
+    const used = boardsUsing(card.imageId).length;
+    removeFromGallery(card.imageId);
+
+    onStatus(
+      `Picture deleted${used > 1 ? ` from all ${used} boards` : ""} — Ctrl+Z to undo, ` +
+        "and the file goes at the next restart"
+    );
+  });
+
+  button.classList.add("tool-danger");
+  return button;
+}
 
 /** How a card type dragged out of the rail identifies itself to the canvas. */
 export const CARD_DRAG_TYPE = "application/x-noteapp-cardtype";

@@ -88,6 +88,7 @@ function updateChrome() {
 
   renderCrumbs();
   refreshMap();
+  refreshGallery();
   refreshInspector();
 }
 
