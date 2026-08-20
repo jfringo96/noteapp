@@ -13,7 +13,8 @@
  * CSS differs.
  */
 
-import { boardFace, renameBoard } from "../boards.js";
+import { boardFace, cleanBoardName, renameBoard } from "../boards.js";
+import { BOARD_NAME_MAX } from "../constants.js";
 import { navigateTo } from "../navigation.js";
 import { imageUrl } from "../images.js";
 import { commitEdit, getCard, stashEdit, touch } from "../store.js";
@@ -38,9 +39,16 @@ export function build(card, el, body) {
   const text = document.createElement("div");
   text.className = "board-text";
 
-  const name = document.createElement("input");
-  name.type = "text";
+  /*
+   * A textarea rather than a text input, for one reason: an input cannot wrap.
+   * A board tile is narrow, so a name of any length used to run straight out of
+   * view after a few words. This wraps onto a second line and stops there —
+   * `BOARD_NAME_MAX` is set so a full-length name fits in those two lines.
+   */
+  const name = document.createElement("textarea");
   name.className = "board-name";
+  name.rows = 2;
+  name.maxLength = BOARD_NAME_MAX;
   name.spellcheck = false;
   name.setAttribute("aria-label", "Board name");
 
@@ -52,9 +60,25 @@ export function build(card, el, body) {
   name.addEventListener("input", () => {
     const target = getCard(card.id);
     if (!target || !target.targetBoardId) return;
+
+    // A textarea accepts things a name shouldn't hold — a pasted line break,
+    // most obviously. Clean it, and put the cleaned text back in the field so
+    // what you see is what got stored.
+    const tidy = cleanBoardName(name.value);
+    if (tidy !== name.value) name.value = tidy;
+
     stashEdit();
-    renameBoard(target.targetBoardId, name.value);
+    renameBoard(target.targetBoardId, tidy);
     touch();
+  });
+
+  // Enter would add a line the tile has no room for. Committing the name is
+  // the more useful thing for it to do.
+  name.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      name.blur();
+    }
   });
 
   name.addEventListener("blur", commitEdit);

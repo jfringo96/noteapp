@@ -44,7 +44,7 @@ import { initLightbox, isOpen as lightboxOpen } from "./lightbox.js";
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
 import { imageFilesFrom, sweepImages } from "./images.js";
-import { isHome } from "./boards.js";
+import { cleanBoardName, isHome } from "./boards.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -224,8 +224,13 @@ titleInput.addEventListener("focus", stashEdit);
 titleInput.addEventListener("input", () => {
   if (isHome(state.currentBoardId)) return;
 
+  // Same rule as the name on the card: one line, within the tile's budget.
+  // Renaming from up here must not produce a name the tile can't show.
+  const tidy = cleanBoardName(titleInput.value);
+  if (tidy !== titleInput.value) titleInput.value = tidy;
+
   stashEdit();
-  currentBoard().title = titleInput.value;
+  currentBoard().title = tidy;
   touch();
 });
 

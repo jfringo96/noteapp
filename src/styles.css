@@ -784,20 +784,34 @@ html, body {
   padding-bottom: .15rem;
 }
 
+/*
+ * A textarea, so the name can wrap. Fixed at two lines: the tile has room for
+ * exactly that, and BOARD_NAME_MAX is set so a full-length name fits in them.
+ */
 .board-name {
   width: 100%;
+  height: calc(2 * 1.25em);
   padding: 0;
   font: inherit;
   font-size: .875rem;
   font-weight: 600;
+  line-height: 1.25;
   text-align: center;
   color: var(--ink);
   background: none;
   border: 0;
-  text-overflow: ellipsis;
+  resize: none;
+  overflow: hidden;
+  /* A single unbroken 30-character word would otherwise overflow sideways
+     rather than wrapping, which is the bug this whole change is about. */
+  overflow-wrap: anywhere;
 }
 
 .board-name:focus { outline: none; }
+
+/* While you are typing, nothing should be hidden — even if it took a third
+   line to get there on an unusually narrow tile. */
+.board-name:focus { overflow-y: auto; }
 
 /* Until the card is selected the name ignores the pointer, so a click lands on
    the face and simply selects. Once selected it becomes a normal text field —

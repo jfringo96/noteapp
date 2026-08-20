@@ -9,7 +9,7 @@
  */
 
 import { applyChange, currentBoard, state } from "./store.js";
-import { DEFAULT_SIZE, HOME_ID, MAP_MAX_DEPTH, uid } from "./constants.js";
+import { BOARD_NAME_MAX, DEFAULT_SIZE, HOME_ID, MAP_MAX_DEPTH, uid } from "./constants.js";
 
 /** Creates an empty board and returns its id. Does not navigate. */
 export function createBoard(title = "Untitled board") {
@@ -50,9 +50,24 @@ export function renameBoard(id, title) {
   const board = state.boards[id];
   if (!board) return false;
 
-  board.title = title;
+  board.title = cleanBoardName(title);
   return true;
 }
+
+/**
+ * A board name is one line of plain text, within the tile's budget.
+ *
+ * The field enforces both already; this enforces them again for everything the
+ * field isn't — a pasted paragraph, an imported document, a file edited by
+ * hand. The renderer has nowhere to put a third line, so the rule belongs
+ * where the value is set rather than where it is drawn.
+ */
+export const cleanBoardName = (title) =>
+  String(title ?? "")
+    // Not `trim()`: this runs on every keystroke, and trimming would eat the
+    // space you just typed between two words.
+    .replace(/[\s]+/g, " ")
+    .slice(0, BOARD_NAME_MAX);
 
 export const isHome = (id) => id === HOME_ID;
 
@@ -203,17 +218,37 @@ export function boardTree() {
   // Boards nothing links to are still real and still hold cards — a board card
   // can be deleted while the board it pointed at stays. Losing them from the
   // Map would make them unreachable, so they get their own section.
-  const orphans = Object.values(state.boards)
-    .filter((board) => !seen.has(board.id))
-    .map((board) => ({
-      id: board.id,
-      title: board.title,
-      count: board.cards.length,
-      path: [board.id],
-      looped: false,
-      children: [],
-    }))
-    .sort((a, b) => a.title.localeCompare(b.title));
+  //
+  // They are drawn as SUBTREES, not as a flat list. Deleting one board card can
+  // strand a whole branch: the board it pointed at, plus everything nested
+  // below that. Listing those side by side at the top level would throw away
+  // the structure they still have. Only the boards nothing points at are roots
+  // down here; the rest hang off them exactly as before.
+  const linked = new Set();
+  for (const board of Object.values(state.boards)) {
+    for (const childId of childBoardIds(board)) linked.add(childId);
+  }
+
+  const orphans = [];
+  const stranded = () => Object.values(state.boards).filter((board) => !seen.has(board.id));
+
+  let remaining = stranded();
+
+  while (remaining.length) {
+    // Prefer a board nothing points at. Failing that — two stranded boards
+    // pointing at each other, with nothing pointing at either — any of them
+    // will do, or the loop never ends.
+    const next = remaining.find((board) => !linked.has(board.id)) || remaining[0];
+
+    const drawn = node(next.id, []);
+    if (drawn) orphans.push(drawn);
+
+    const before = remaining.length;
+    remaining = stranded();
+    if (remaining.length === before) break; // nothing was consumed; refuse to spin
+  }
+
+  orphans.sort((a, b) => a.title.localeCompare(b.title));
 
   return { root, orphans };
 }

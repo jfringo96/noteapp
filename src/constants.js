@@ -51,6 +51,19 @@ export const COLUMNABLE = ["text", "list", "image", "link", "place", "board"];
 export const HOME_ID = "b_home";
 export const HOME_TITLE = "Home";
 
+/**
+ * How long a board's name may be.
+ *
+ * A board is a fixed tile, so the name has a fixed amount of room: two lines
+ * under the thumbnail, about eleven characters each at this width and weight.
+ * The number is set to what those two lines genuinely hold, so a name that is
+ * accepted is a name you can read — the cap exists to stop text disappearing,
+ * and a cap that still allowed a third line would not.
+ *
+ * Raising it means widening the tile in DEFAULT_SIZE.board to match.
+ */
+export const BOARD_NAME_MAX = 22;
+
 /** How deep the Map will draw before it stops following a chain of boards. */
 export const MAP_MAX_DEPTH = 12;
 
@@ -79,7 +92,7 @@ export const MIN_SIZE = {
   image: { w: 90, h: 70 },
   link: { w: 150, h: 66 },
   place: { w: 150, h: 66 },
-  board: { w: 78, h: 104 },
+  board: { w: 78, h: 130 },
   column: { w: 200, h: 140 },
 };
 
@@ -89,8 +102,10 @@ export const DEFAULT_SIZE = {
   image: { w: 280, h: 200 },
   link: { w: 240, h: 84 },
   place: { w: 240, h: 84 },
-  // A smallish tile: a square thumbnail with two short lines of text under it.
-  board: { w: 98, h: 126 },
+  // A smallish tile: a square thumbnail, then up to two lines of name and the
+  // count under it. Boards never resize, so this is the size, always — see
+  // `normalise()` in store.js, which holds existing cards to it too.
+  board: { w: 98, h: 152 },
   column: { w: 270, h: 340 },
 };
 

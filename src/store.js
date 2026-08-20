@@ -14,7 +14,15 @@
  *   3. Gestures move pixels, then commit once              → see gestures.js
  */
 
-import { HISTORY_LIMIT, DEFAULT_SIZE, HOME_ID, HOME_TITLE, MIN_SIZE, uid } from "./constants.js";
+import {
+  BOARD_NAME_MAX,
+  DEFAULT_SIZE,
+  HISTORY_LIMIT,
+  HOME_ID,
+  HOME_TITLE,
+  MIN_SIZE,
+  uid,
+} from "./constants.js";
 
 export function emptyDoc() {
   return {
@@ -373,5 +381,39 @@ function normalise(doc) {
     changed = true;
   }
 
+  for (const board of Object.values(doc.boards)) {
+    if (board.title.length > BOARD_NAME_MAX) {
+      board.title = board.title.slice(0, BOARD_NAME_MAX);
+      changed = true;
+    }
+
+    for (const card of board.cards) {
+      if (fixBoardTile(card)) changed = true;
+      if (card.type === "column") {
+        for (const item of card.items) if (fixBoardTile(item)) changed = true;
+      }
+    }
+  }
+
   return changed;
+}
+
+/**
+ * A board card is a fixed tile, so its size is the constant rather than
+ * whatever the card happens to be carrying.
+ *
+ * Without this, changing the tile would only affect boards created afterwards,
+ * and every board card made before the change would keep clipping its name at
+ * the old height. Dragging also clamps against these numbers, so leaving them
+ * stale would put the card's edge in a different place from its picture.
+ */
+function fixBoardTile(card) {
+  if (card.type !== "board") return false;
+
+  const size = DEFAULT_SIZE.board;
+  if (card.w === size.w && card.h === size.h) return false;
+
+  card.w = size.w;
+  card.h = size.h;
+  return true;
 }
