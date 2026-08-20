@@ -10,7 +10,8 @@
 
 import { CANVAS_SIZE, CARD_TYPES, DEFAULT_SIZE, TYPE_LABEL, clamp } from "./constants.js";
 import { addCard, currentBoard, getSelectedId, select } from "./store.js";
-import { addBoardCard } from "./boards.js";
+import { addBoardCard, linkBoard } from "./boards.js";
+import { BOARD_DRAG_TYPE } from "./map.js";
 import { buildCard, updateCard } from "./cards/index.js";
 import { initDrop } from "./drop.js";
 import { imageFilesFrom, importImage } from "./images.js";
@@ -181,11 +182,15 @@ export function hidePicker() {
 /* ---------------------------------------------------------------- images --- */
 
 function initDropTarget() {
+  const carriesBoard = (event) => [...event.dataTransfer.types].includes(BOARD_DRAG_TYPE);
+
   // Without preventDefault on dragover, the drop event never fires and the
   // window navigates to the file instead.
   scroller.addEventListener("dragover", (event) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+    // "link" rather than "copy": dropping a board out of the Map points a new
+    // tile at the board that is already there, it does not duplicate it.
+    event.dataTransfer.dropEffect = carriesBoard(event) ? "link" : "copy";
     scroller.classList.add("is-drop-target");
   });
 
@@ -198,8 +203,39 @@ function initDropTarget() {
     scroller.classList.remove("is-drop-target");
 
     const point = canvasPoint(event.clientX, event.clientY);
+
+    const boardId = event.dataTransfer.getData(BOARD_DRAG_TYPE);
+    if (boardId) {
+      dropBoard(boardId, point.x, point.y);
+      return;
+    }
+
     addImageFiles(imageFilesFrom(event.dataTransfer.files), point.x, point.y);
   });
+}
+
+/**
+ * A board dragged out of the Map and dropped here.
+ *
+ * Centred on the pointer, like every other drop, and clamped so a tile aimed
+ * at the edge of the canvas doesn't end up half outside it.
+ */
+function dropBoard(boardId, x, y) {
+  const size = DEFAULT_SIZE.board;
+
+  const cardId = linkBoard(
+    boardId,
+    clamp(x - size.w / 2, 0, CANVAS_SIZE - size.w),
+    clamp(y - size.h / 2, 0, CANVAS_SIZE - size.h)
+  );
+
+  if (!cardId) {
+    onImportError("That board is no longer there.");
+    return;
+  }
+
+  select(cardId);
+  onImportError("Added to this board — the board itself is unchanged.");
 }
 
 function chooseImageFiles(x, y) {

@@ -460,8 +460,37 @@ unreachable.
 Navigating is never an undoable action, but it must seal any in-flight edit
 first — otherwise merely walking between boards lands in the undo stack.
 
-Deleting never cascades. Deleting a board card leaves the board; deleting a
-board leaves cards pointing at it as broken links.
+### Deleting
+
+Two different actions, named apart because they are not the same thing:
+
+- **Remove** (in the inspector, on a selected tile) takes the tile away. The
+  board carries on existing and is still in the Map.
+- **Delete** (the × in the Map) ends the board.
+
+Deleting a board takes with it everything on that board — notes, lists, links,
+places, columns and the image cards — and **every tile pointing at it**, on any
+board, including inside columns. No "Missing board" leftovers to find later.
+
+**Nested boards are asked about.** They are separate documents that happen to
+be linked from here, so the confirmation lists them and you tick the ones that
+should go too, with Select all / Select none. Nothing is ticked to begin with:
+the safe answer should be the one you get by not thinking about it. Boards left
+out survive **unlinked** and appear in the Map.
+
+**A board can be dragged out of the Map onto a canvas** to put a tile there.
+That is the way back for an unlinked board, and the only reason leaving boards
+unlinked is safe rather than a slow way of losing them. Nesting is by
+reference, so this only adds a card — the board is untouched and can be dropped
+in several places.
+
+**Image files** are removed from disk only when nothing else uses that picture;
+a photograph on two boards survives the deletion of one of them. This happens
+at the next launch rather than at the moment of deletion, because doing it
+eagerly would mean undo bringing back a card whose picture had already gone.
+
+Both deletions ask first. Focus lands on Cancel, never on the destructive
+button.
 
 ---
 

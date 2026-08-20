@@ -22,6 +22,7 @@ import {
 import { moveCard } from "./move.js";
 import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
+import { initConfirm, isConfirmOpen } from "./confirm.js";
 import { collectionName, initCollection } from "./collection.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
 
@@ -134,6 +135,7 @@ setHooks({
 
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
+initConfirm($("dialog"));
 initMap($("map"), $("mapBtn"), setStatus);
 initFileMenu($("fileMenu"), $("fileBtn"));
 
@@ -245,6 +247,11 @@ window.addEventListener("keydown", (event) => {
   // The viewer owns the keyboard while it is up — undoing or deleting
   // something you cannot see would be alarming.
   if (lightboxOpen()) return;
+
+  // Same for the confirmation dialog, and more so: it is asking about a
+  // deletion, and Delete or Ctrl+Z arriving behind it would act on the board
+  // underneath. The dialog handles its own Escape.
+  if (isConfirmOpen()) return;
 
   const mod = event.ctrlKey || event.metaKey;
 

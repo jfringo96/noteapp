@@ -23,24 +23,126 @@ export function createBoard(title = "Untitled board") {
 }
 
 /**
- * Deleting a board NEVER cascades. Cards pointing at it are left alone and
- * render as visibly broken links — losing a card because something it
- * referenced went away would be worse than showing the breakage.
+ * Deletes a board, everything on it, and every tile pointing at it.
+ *
+ * Three rules, and each was a deliberate choice:
+ *
+ * 1. **The cards on it go.** Text, lists, links, places, columns and the image
+ *    cards. The image FILES are a separate question — see `sweepImages`.
+ * 2. **Tiles pointing at it go too, wherever they are.** A board can be linked
+ *    from several places, and leaving those behind as "Missing board" tiles
+ *    scattered around the collection is tidying up after yourself with a
+ *    shovel. This reverses the earlier no-cascade rule, deliberately.
+ * 3. **Nested boards only go if named.** They are separate documents that
+ *    happen to be linked from here, so `alsoDelete` is decided by whoever is
+ *    doing the deleting. Anything left out survives unlinked and shows up in
+ *    the Map, where it can be dragged back onto a board.
  */
-export function deleteBoard(id) {
+export function deleteBoard(id, alsoDelete = []) {
   if (id === HOME_ID) return false; // Home is the root; there is no collection without it
-  if (!state.boards[id] || Object.keys(state.boards).length <= 1) return false;
+  if (!state.boards[id]) return false;
+
+  const doomed = new Set([id]);
+  for (const other of alsoDelete) {
+    if (other !== HOME_ID && state.boards[other]) doomed.add(other);
+  }
 
   applyChange(() => {
-    delete state.boards[id];
+    for (const boardId of doomed) delete state.boards[boardId];
 
-    // Standing on the board being deleted? Fall back to any surviving one.
-    if (state.currentBoardId === id) {
-      state.currentBoardId = Object.keys(state.boards)[0];
+    const survives = (card) => !(card.type === "board" && doomed.has(card.targetBoardId));
+
+    for (const board of Object.values(state.boards)) {
+      board.cards = board.cards.filter(survives);
+
+      // A board card sitting in a column is just as much a link to that board.
+      for (const card of board.cards) {
+        if (card.type === "column") card.items = card.items.filter(survives);
+      }
     }
+
+    // Standing on one of them? Home is the one board that always exists.
+    if (doomed.has(state.currentBoardId)) state.currentBoardId = HOME_ID;
   });
 
   return true;
+}
+
+/** Which boards hold a tile pointing at this one. */
+function boardsLinkingTo(targetId) {
+  return Object.values(state.boards)
+    .filter((board) => childBoardIds(board).includes(targetId))
+    .map((board) => board.id);
+}
+
+/**
+ * Every board nested under this one, however deep, each listed once.
+ *
+ * This is what the delete confirmation offers as a checklist. `depth` is for
+ * indenting it, and `elsewhere` marks a board that is ALSO linked from outside
+ * the branch being deleted — ticking that one removes it from somewhere you
+ * are not currently looking at, which is worth knowing before you do it.
+ *
+ * Deduped and cycle-safe: boards point at each other freely, and a checklist
+ * that listed the same board twice would let you tick it and untick it at the
+ * same time.
+ */
+export function nestedBoards(rootId) {
+  const found = [];
+  const seen = new Set([rootId]);
+
+  const walk = (id, depth) => {
+    const board = state.boards[id];
+    if (!board) return;
+
+    for (const childId of childBoardIds(board)) {
+      if (seen.has(childId)) continue;
+      seen.add(childId);
+
+      const child = state.boards[childId];
+      if (!child) continue;
+
+      found.push({ id: childId, title: child.title, depth });
+      walk(childId, depth + 1);
+    }
+  };
+
+  walk(rootId, 0);
+
+  for (const entry of found) {
+    entry.elsewhere = boardsLinkingTo(entry.id).some((boardId) => !seen.has(boardId));
+  }
+
+  return found;
+}
+
+/**
+ * Points a new tile on the current board at a board that already exists.
+ *
+ * This is the way back for a board left unlinked by a deletion: drag it out of
+ * the Map and drop it somewhere. Nesting is by reference, so this is only ever
+ * adding a card — the board itself is untouched and every other tile pointing
+ * at it carries on working.
+ */
+export function linkBoard(targetBoardId, x, y) {
+  if (!state.boards[targetBoardId]) return null;
+
+  const cardId = uid("c");
+  const size = DEFAULT_SIZE.board;
+
+  applyChange(() => {
+    currentBoard().cards.push({
+      id: cardId,
+      type: "board",
+      x: Math.round(x),
+      y: Math.round(y),
+      w: size.w,
+      h: size.h,
+      targetBoardId,
+    });
+  });
+
+  return cardId;
 }
 
 /** Home keeps its name. Everything else is renamable. */

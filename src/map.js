@@ -10,10 +10,14 @@
  * behave sensibly here.
  */
 
-import { boardTree, deleteBoard, isHome } from "./boards.js";
+import { boardTree, deleteBoard, isHome, nestedBoards } from "./boards.js";
+import { confirmDelete } from "./confirm.js";
 import { navigateTo } from "./navigation.js";
 import { state } from "./store.js";
 import { createPanel } from "./panel.js";
+
+/** How a board being dragged out of the Map identifies itself to the canvas. */
+export const BOARD_DRAG_TYPE = "application/x-noteapp-board";
 
 let panel = null;
 let onStatus = () => {};
@@ -84,6 +88,27 @@ function branch(node, depth) {
     panel.hide();
   });
 
+  /*
+   * Drag a board out of the Map and drop it on a canvas to put a tile there.
+   *
+   * This is the way back for a board left unlinked by a deletion, and the only
+   * reason it is safe to leave boards unlinked at all: the Map is where they
+   * are, and this is how they get out again. Nesting is by reference, so a
+   * board can be dropped in several places at once.
+   */
+  open.draggable = true;
+
+  open.addEventListener("dragstart", (event) => {
+    event.dataTransfer.setData(BOARD_DRAG_TYPE, node.id);
+    event.dataTransfer.effectAllowed = "link";
+    row.classList.add("is-dragging");
+
+    // The panel would otherwise sit over the canvas being dragged onto.
+    panel.hide();
+  });
+
+  open.addEventListener("dragend", () => row.classList.remove("is-dragging"));
+
   row.appendChild(open);
 
   // Home has no delete: it is the root every trail and every branch hangs off.
@@ -104,16 +129,39 @@ function deleteButton(node) {
   remove.title = "Delete this board";
   remove.setAttribute("aria-label", `Delete ${node.title || "Untitled"}`);
 
-  remove.addEventListener("click", () => {
-    // Deleting never cascades: cards pointing here become visibly broken links
-    // rather than disappearing along with the board.
-    if (!deleteBoard(node.id)) {
+  remove.addEventListener("click", async () => {
+    const name = node.title || "Untitled";
+    const nested = nestedBoards(node.id);
+
+    // The panel is dismissed by any pointerdown outside it, and the dialog is
+    // outside it. Close it deliberately instead of letting that race.
+    panel.hide();
+
+    const answer = await confirmDelete({
+      title: `Delete ${name}?`,
+      message:
+        "Everything on this board goes with it — notes, lists, links and pictures. " +
+        "Ctrl+Z puts it back.",
+      choices: nested,
+      choicesLabel: nested.length
+        ? "There are boards inside it. Tick any that should be deleted too — the rest stay in the Map, unlinked."
+        : "",
+      confirmLabel: "Delete board",
+    });
+
+    if (answer === null) return;
+
+    if (!deleteBoard(node.id, answer)) {
       onStatus("That board can't be deleted.");
       return;
     }
 
-    onStatus(`Deleted ${node.title || "Untitled"} — Ctrl+Z to undo`);
-    panel.refresh();
+    const kept = nested.length - answer.length;
+    onStatus(
+      `Deleted ${name}` +
+        (kept > 0 ? ` — ${kept} board${kept === 1 ? "" : "s"} left unlinked, find them in the Map` : "") +
+        " — Ctrl+Z to undo"
+    );
   });
 
   return remove;

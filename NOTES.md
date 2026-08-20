@@ -447,14 +447,83 @@ Boards nothing links to get a section of their own at the bottom. Deleting a
 board card leaves the board it pointed at alive and deliberately so — without
 that section, those boards would exist with no way to reach them.
 
+### Deleting a board now cascades, on purpose (2026-08-20)
+
+This reverses "Deleting never cascades", recorded above. That rule said a
+deleted board left its tiles behind as visible "Missing board" links, on the
+grounds that showing the breakage beat hiding it. In use it just meant tidying
+up by hand afterwards, in places you had to go and find. Deleting a board now
+removes every tile pointing at it, wherever they are.
+
+What a board delete does, exactly:
+
+- **Everything on it goes** — notes, lists, links, places, columns, and the
+  image *cards*.
+- **Every tile pointing at it goes**, on any board, including inside columns.
+- **Nested boards go only if named.** They are separate documents that happen
+  to be linked from here, so the dialog asks. Anything left out survives
+  unlinked and turns up in the Map.
+
+The old rule is still right about one thing, so `board.js` keeps rendering a
+"Missing board" tile: a hand-edited file can still point at a board that isn't
+there, and that has to draw rather than throw.
+
+### Image files are still swept at startup, not at the moment of deletion
+
+The rule wanted was "delete the file if this was the only copy of that picture,
+keep it if the picture is used elsewhere". That is exactly what `sweepImages`
+already does — it keeps anything referenced anywhere in the collection.
+
+Doing it eagerly, the moment a board is deleted, would break undo: the card
+would come back and the photograph would not. So the space comes back on the
+next launch instead, which is the one moment the history stacks are empty and
+"unreferenced" is a stable idea. Same outcome, no window where Ctrl+Z lies.
+
+### One modal, and only for destroying something
+
+The no-modal rule held everywhere, including for deleting a board, which used a
+button that armed itself on the first click and disarmed after four seconds.
+
+It stopped holding when deleting a board had to ask *which* of the boards inside
+it should go too. That is a question with a list attached, and a list is not
+something a button can arm into. Once one of the two deletions was a dialog,
+having the other be a self-relabelling button meant two different answers to the
+same question, so both are dialogs now.
+
+They are also named apart, which the old design never did — both were "Delete":
+
+| | What it does |
+|---|---|
+| **Remove** (inspector, on a selected tile) | Takes the tile away. The board carries on existing, in the Map. |
+| **Delete** (the × in the Map) | Ends the board. |
+
+Focus lands on Cancel, never on the destructive button, so a stray Enter
+arriving just as the dialog opens does nothing.
+
+### Boards drag out of the Map to be re-linked
+
+This is what makes it safe to leave boards unlinked after a deletion. Without a
+way back, "it stays in the Map" would be a slow way of saying "it's gone" —
+the Map could show it, and there would be nothing you could do with it.
+
+Dragging a row out of the Map and dropping it on a canvas points a NEW tile at
+that board. Nesting is by reference, so this only ever adds a card: the board
+is untouched, and every other tile pointing at it carries on working. That is
+also why the same board can be dropped in several places.
+
+HTML5 drag-and-drop here rather than the pointer-based gestures the canvas uses
+internally, because this drag starts in a floating panel and ends on the canvas,
+and the file-drop target it lands on already speaks that protocol.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one
   keystroke, so a card going instantly is fine. Deleting a *board* is the case
   that mattered and it is done — see "Deleting a board is armed, not instant"
   above. Nothing further is planned here.
-- **Warning when deleting a board that other cards link to** (handoff open
-  question 4). Currently they'd become broken links, deliberately.
+- ~~Warning when deleting a board that other cards link to.~~ Answered: the
+  tiles are deleted along with the board, so there is nothing to warn about.
+  See "Deleting a board now cascades" above.
 - **Undo landing on a board outside the current trail** resets the breadcrumb to
   just that board, losing the walked route (handoff open question 3). Truthful,
   possibly wrong.

@@ -20,7 +20,8 @@ import {
   stashEdit,
   touch,
 } from "./store.js";
-import { setBoardCover } from "./boards.js";
+import { boardFace, setBoardCover } from "./boards.js";
+import { confirmDelete } from "./confirm.js";
 import { importImage } from "./images.js";
 import { openLink } from "./cards/link.js";
 import { openPlace } from "./cards/place.js";
@@ -69,7 +70,7 @@ export function refreshInspector() {
 
   if (card.type === "column") panel.appendChild(collapseTool(card));
 
-  // Boards have no delete button of their own — see deleteTool.
+  // Boards have no × on the card itself — removing the tile lives here.
   if (card.type === "board") panel.appendChild(deleteTool(card));
 }
 
@@ -194,40 +195,35 @@ function openPlaceTool(card) {
 }
 
 /**
- * Deleting a board takes two clicks: the first arms it, the second does it.
+ * Removing a board card asks first, in the same dialog the Map's delete uses.
  *
- * A board card is the only way back to everything inside it, so a stray click
- * on a one-shot × is expensive in a way it isn't for a note. Arming in place
- * rather than opening a dialog keeps the no-modal rule — and it disarms itself
- * if you wander off.
+ * These are two genuinely different actions wearing the same × in the old
+ * design, so they are named apart now: this one is **Remove**, and it takes
+ * away the tile while the board carries on existing. The Map's is **Delete**,
+ * and that one is the end of the board.
+ *
+ * It used to arm itself on the first click instead, to avoid a modal. That
+ * held until deleting a board had to ask which boards inside it went too —
+ * once one of them was a dialog, having the other be a button that changes its
+ * own label was two answers to the same question.
  */
 function deleteTool(card) {
-  let armed = false;
-  let timer = null;
+  const button = tool("Remove", "×", async () => {
+    const face = boardFace(card.targetBoardId);
+    const name = face ? face.title || "Untitled" : "this tile";
 
-  const button = tool("Delete", "×", () => {
-    const label = button.querySelector(".tool-label");
+    const answer = await confirmDelete({
+      title: `Remove ${name} from this board?`,
+      message:
+        "The board itself is not deleted — it stays in the Map, and you can drag it " +
+        "back onto any board from there.",
+      confirmLabel: "Remove tile",
+    });
 
-    if (!armed) {
-      armed = true;
-      button.classList.add("is-armed");
-      label.textContent = "Sure?";
+    if (answer === null) return;
 
-      timer = setTimeout(() => {
-        armed = false;
-        button.classList.remove("is-armed");
-        label.textContent = "Delete";
-      }, 4000);
-
-      return;
-    }
-
-    clearTimeout(timer);
     deleteCard(card.id);
-
-    // Worth saying, because it is not what people expect: deleting the card
-    // removes the link, not the board. Deleting never cascades.
-    onStatus("Link removed — the board itself is still under Boards.");
+    onStatus("Tile removed — the board itself is still in the Map.");
   });
 
   button.classList.add("tool-danger");

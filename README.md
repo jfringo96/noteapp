@@ -64,6 +64,25 @@ straight: a board linked from two places shows up in both, a branch that loops
 back on itself stops and says so, and any board nothing links to gets its own
 section at the bottom rather than quietly vanishing.
 
+**Drag a board out of the Map** and drop it on any board to put a tile there.
+That's how an unlinked board finds a home again.
+
+## Deleting
+
+Two different things, and they're named apart:
+
+- **Remove** (in the inspector, with a tile selected) takes away *the tile*. The
+  board itself carries on existing — you'll find it in the Map.
+- **Delete** (the × in the Map) ends *the board*.
+
+Deleting a board takes everything on it — notes, lists, links, pictures — and
+removes every tile pointing at it, wherever those are. If there are boards
+nested inside it, you get a list and tick the ones that should go too. Anything
+you leave stays in the Map, unlinked, ready to be dragged back onto a board.
+
+Ctrl+Z undoes any of it. Pictures are only deleted from disk when nothing else
+is using them, so a photo on two boards survives losing one of them.
+
 ## Your collections live here
 
 ```
