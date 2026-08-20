@@ -13,6 +13,7 @@ import {
   galleryWasCreated,
   getCard,
   getSelectedId,
+  getSelectedIds,
   redo,
   setHooks,
   stashEdit,
@@ -41,6 +42,7 @@ import {
   focusNewCard,
   hidePicker,
   initCanvas,
+  elementFor,
   placeGalleryImage,
   refreshStacking,
   render,
@@ -170,6 +172,7 @@ initLightbox($("lightbox"));
 setDropHandlers({
   resolve: resolveDrop,
   feedback: showDropFeedback,
+  elements: elementFor,
   commit: (cardId, destination) => {
     if (!moveCard(cardId, destination)) return false;
 
@@ -343,6 +346,15 @@ window.addEventListener("keydown", (event) => {
 
   // Guarded, or Backspace would delete the card you are editing text in.
   if ((event.key === "Delete" || event.key === "Backspace") && !isEditable(document.activeElement)) {
+    // A group goes through the rail's armed Delete rather than the keyboard.
+    // One keypress quietly removing a dozen cards is a lot to take back, even
+    // with undo, and the rail is already showing what is selected.
+    if (getSelectedIds().length > 1) {
+      event.preventDefault();
+      setStatus("Several cards are selected — use Delete in the left rail.");
+      return;
+    }
+
     const id = getSelectedId();
     if (!id) return;
     event.preventDefault();

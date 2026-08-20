@@ -168,8 +168,12 @@ between cards.
 
 ## Getting around a board
 
-Drag empty space to move the board around. Clicking empty space still deselects,
-and double-clicking still opens the card picker.
+**Right-drag** empty space to move the board around.
+
+**Left-drag** empty space to draw a selection box — everything it touches gets
+outlined. Drag the group to move it all at once, drop it onto a board to file it
+there, or use Delete in the left rail to remove the lot. Clicking empty space
+deselects, and double-clicking still opens the card picker.
 
 ## Adding cards
 

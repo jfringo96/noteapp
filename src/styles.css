@@ -367,9 +367,17 @@ html, body {
   background-color: var(--ground);
   background-image: radial-gradient(var(--ground-dot) 1px, transparent 1px);
   background-size: 24px 24px;
-  /* Advertises that the empty board can be dragged. A gesture nothing points
-     at may as well not exist. */
+  /* Advertises that the board can be dragged. A gesture nothing points at may
+     as well not exist. */
   cursor: grab;
+
+  /*
+   * Dragging across the board used to paint a blue text-selection stripe over
+   * whatever it crossed. Nothing on the canvas is text you would want to select
+   * by dragging past it — the text you do select lives in fields, which get it
+   * back explicitly below.
+   */
+  user-select: none;
 }
 
 .canvas.is-panning { cursor: grabbing; }
@@ -450,7 +458,7 @@ html, body {
 /* Text fields keep a caret. `cursor` inherits, so without this they would take
    the card's default and stop looking editable. */
 .card textarea,
-.card input[type="text"] { cursor: auto; }
+.card input[type="text"] { cursor: auto; user-select: text; }
 
 /* Pictures and boards drag from anywhere on the card, so say so. */
 .card-image { cursor: grab; }
@@ -1438,3 +1446,26 @@ html, body {
 /* A menu row that leads with an icon. */
 .menu-item-icon { gap: .55rem; }
 .menu-item-icon svg { flex: 0 0 auto; color: var(--muted); }
+
+/* --------------------------------------------------------------- marquee */
+
+/*
+ * The selection box. Deliberately a thin outline over a barely-there wash: the
+ * things it selects announce themselves with their own outlines, and a strong
+ * box would compete with them.
+ */
+.marquee {
+  position: absolute;
+  z-index: 450;
+  pointer-events: none;
+  background: rgb(35 41 53 / 0.06);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+}
+
+.tool-count {
+  margin: .15rem 0 .35rem;
+  font-size: .625rem;
+  text-align: center;
+  color: var(--muted);
+}

@@ -12,12 +12,21 @@ import {
   CANVAS_SIZE,
   CARD_TYPES,
   DEFAULT_SIZE,
+  DRAG_THRESHOLD,
   IMAGE_CARD_EDGE,
   LINE_MIN_LENGTH,
   TYPE_LABEL,
   clamp,
 } from "./constants.js";
-import { addCard, currentBoard, getSelectedId, select } from "./store.js";
+import {
+  addCard,
+  currentBoard,
+  getCard,
+  getSelectedId,
+  getSelectedIds,
+  select,
+  selectMany,
+} from "./store.js";
 import { addBoardCard, linkBoard } from "./boards.js";
 import { BOARD_DRAG_TYPE } from "./map.js";
 import { IMAGE_DRAG_TYPE, galleryOffset } from "./gallerypanel.js";
@@ -65,9 +74,23 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
       return;
     }
 
+    // Right drags the board around, left draws a selection box over it. Panning
+    // was on the left until marquee selection needed that button more; the
+    // board is something you reach for constantly, so it went to the button
+    // nothing else was using rather than behind a modifier key.
+    if (event.button === 2) {
+      startPan(event);
+      return;
+    }
+
+    if (event.button !== 0) return;
+
     select(null);
-    startPan(event);
+    startMarquee(event);
   });
+
+  // Or the OS menu appears every time you go to move the board.
+  canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
   canvas.addEventListener("dblclick", (event) => {
     if (event.target !== canvas) return;
@@ -88,7 +111,7 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
 
 export function render() {
   const board = currentBoard();
-  const selectedId = getSelectedId();
+  const selected = new Set(getSelectedIds());
   const seen = new Set();
 
   // Switching board is the one time a wholesale rebuild is right: none of the
@@ -115,7 +138,7 @@ export function render() {
       canvas.appendChild(el);
     }
 
-    updateCard(el, card, index, selectedId);
+    updateCard(el, card, index, selected);
     seen.add(card.id);
   });
 
@@ -132,21 +155,21 @@ export function render() {
  * the element the click is landing on.
  */
 export function refreshStacking() {
-  const selectedId = getSelectedId();
+  const selected = new Set(getSelectedIds());
 
   currentBoard().cards.forEach((card, index) => {
     const el = elements.get(card.id);
     if (!el) return;
 
     el.style.zIndex = String(index + 1);
-    el.classList.toggle("is-selected", card.id === selectedId);
+    el.classList.toggle("is-selected", selected.has(card.id));
 
     // Cards inside a column live in the column's own element map, not this
     // one, so they have to be reached separately or selecting one would show
     // nothing until the next full render.
     if (card.type === "column" && el.__itemEls) {
       for (const [id, itemEl] of el.__itemEls) {
-        itemEl.classList.toggle("is-selected", id === selectedId);
+        itemEl.classList.toggle("is-selected", selected.has(id));
       }
     }
   });
@@ -452,10 +475,7 @@ export function createBoardCard(x, y) {
  * The board moves the opposite way to the pointer — grab the paper and pull it,
  * rather than pushing a viewport around over it.
  */
-const PAN_THRESHOLD = 4;
-
 function startPan(event) {
-  if (event.button !== 0) return; // left button only; right is the menu
 
   const from = { x: event.clientX, y: event.clientY };
   const at = { left: scroller.scrollLeft, top: scroller.scrollTop };
@@ -466,7 +486,7 @@ function startPan(event) {
     const dy = moveEvent.clientY - from.y;
 
     if (!panning) {
-      if (Math.abs(dx) < PAN_THRESHOLD && Math.abs(dy) < PAN_THRESHOLD) return;
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
 
       panning = true;
       canvas.classList.add("is-panning");
@@ -490,6 +510,82 @@ function startPan(event) {
   window.addEventListener("pointermove", move, { passive: false });
   window.addEventListener("pointerup", stop);
   window.addEventListener("pointercancel", stop);
+}
+
+/* -------------------------------------------------------------- marquee --- */
+
+/**
+ * Drag a box over the board to select everything it touches.
+ *
+ * Touches, not encloses: a box you have to draw completely around things is
+ * fiddly on a board where cards overlap, and intersection is what every canvas
+ * tool does.
+ *
+ * Like every other drag here it waits for a few pixels first, so a plain click
+ * on empty space still just deselects.
+ */
+function startMarquee(event) {
+  const from = canvasPoint(event.clientX, event.clientY);
+  let box = null;
+
+  const move = (moveEvent) => {
+    const to = canvasPoint(moveEvent.clientX, moveEvent.clientY);
+    const rect = {
+      x: Math.min(from.x, to.x),
+      y: Math.min(from.y, to.y),
+      w: Math.abs(to.x - from.x),
+      h: Math.abs(to.y - from.y),
+    };
+
+    if (!box) {
+      if (Math.max(rect.w, rect.h) < DRAG_THRESHOLD) return;
+
+      box = document.createElement("div");
+      box.className = "marquee";
+      canvas.appendChild(box);
+    }
+
+    moveEvent.preventDefault();
+
+    box.style.left = rect.x + "px";
+    box.style.top = rect.y + "px";
+    box.style.width = rect.w + "px";
+    box.style.height = rect.h + "px";
+
+    selectMany(cardsTouching(rect));
+  };
+
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+
+    if (box) box.remove();
+    box = null;
+  };
+
+  window.addEventListener("pointermove", move, { passive: false });
+  window.addEventListener("pointerup", stop);
+  window.addEventListener("pointercancel", stop);
+}
+
+/**
+ * Top-level cards overlapping the box.
+ *
+ * Cards inside a column are deliberately not included: they belong to the
+ * column, and a selection holding some of a column's rows and not the column
+ * has no sensible answer for what dragging it should do.
+ */
+function cardsTouching(rect) {
+  return currentBoard()
+    .cards.filter(
+      (card) =>
+        card.x < rect.x + rect.w &&
+        card.x + card.w > rect.x &&
+        card.y < rect.y + rect.h &&
+        card.y + card.h > rect.y
+    )
+    .map((card) => card.id);
 }
 
 /* ------------------------------------------------------------------ draw --- */
@@ -585,6 +681,9 @@ function startDrawing(event) {
 }
 
 /* ----------------------------------------------------------------- utils --- */
+
+/** The element drawing a given card, for anything that has to move it. */
+export const elementFor = (id) => elements.get(id) || null;
 
 /** Converts a screen point to canvas coordinates. */
 export function canvasPoint(clientX, clientY) {

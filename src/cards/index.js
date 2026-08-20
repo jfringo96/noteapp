@@ -112,7 +112,7 @@ export function buildCard(card, scroller, options = {}) {
 
 const WHOLE_CARD_DRAG = ["image", "board"];
 
-export function updateCard(el, card, index, selectedId) {
+export function updateCard(el, card, index, selected) {
   // Geometry belongs to the column when the card is in one.
   if (!el.__inColumn) {
     el.style.left = card.x + "px";
@@ -122,7 +122,7 @@ export function updateCard(el, card, index, selectedId) {
     el.style.zIndex = String(index + 1);
   }
 
-  el.classList.toggle("is-selected", card.id === selectedId);
+  el.classList.toggle("is-selected", selected.has(card.id));
 
   if (ACCENTABLE.includes(card.type)) paintAccent(el, card.accent);
 

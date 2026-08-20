@@ -18,8 +18,8 @@
  *                 because a transform would be clipped by the column
  */
 
-import { applyChange, getCard, minSize, select } from "./store.js";
-import { CANVAS_SIZE, clamp } from "./constants.js";
+import { applyChange, getCard, getSelectedIds, isSelected, minSize, select } from "./store.js";
+import { CANVAS_SIZE, DRAG_THRESHOLD, clamp } from "./constants.js";
 
 /**
  * Registered from main.js rather than imported, because the hit-test lives in
@@ -29,11 +29,15 @@ import { CANVAS_SIZE, clamp } from "./constants.js";
 let resolveDrop = () => null;
 let showFeedback = () => {};
 let commitDrop = () => false;
+let elementFor = () => null;
 
-export function setDropHandlers({ resolve, feedback, commit }) {
+export function setDropHandlers({ resolve, feedback, commit, elements }) {
   resolveDrop = resolve;
   showFeedback = feedback;
   commitDrop = commit;
+  // Dragging a group has to move the other cards' elements, and the element
+  // map lives in canvas.js.
+  elementFor = elements || (() => null);
 }
 
 /**
@@ -44,7 +48,7 @@ export function setDropHandlers({ resolve, feedback, commit }) {
  * Nothing is captured or prevented until the threshold is crossed, so a plain
  * click still produces click and dblclick as normal.
  */
-const DRAG_THRESHOLD = 4;
+
 
 export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {}) {
   let pending = false;
@@ -60,6 +64,7 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
   let pointerY = 0;
   let grabOffsetX = 0;
   let grabOffsetY = 0;
+  let companions = [];
 
   surface.addEventListener("pointerdown", (event) => {
     // Controls must never start a drag: the grip's buttons and colour picker,
@@ -68,7 +73,14 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
     if (event.target.closest("button, input, select, label, .card-resize")) return;
     if (!getCard(cardId)) return;
 
-    select(cardId);
+    // Grabbing a card that is already part of a group keeps the group. Anything
+    // else selects just this one — including a plain click on a card outside
+    // the selection, which is how you get out of a group.
+    if (!isSelected(cardId)) select(cardId);
+
+    // Everything else that travels with it. Empty for an ordinary single drag,
+    // which is the only reason all the group handling below costs nothing.
+    companions = getSelectedIds().filter((id) => id !== cardId && elementFor(id));
 
     pending = true;
     active = false;
@@ -130,6 +142,12 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
       dx = event.clientX - startX + (scroller.scrollLeft - startScrollLeft);
       dy = event.clientY - startY + (scroller.scrollTop - startScrollTop);
       el.style.transform = `translate(${dx}px, ${dy}px)`;
+
+      // The rest of the group rides along on the same offset.
+      for (const id of companions) {
+        const other = elementFor(id);
+        if (other) other.style.transform = `translate(${dx}px, ${dy}px)`;
+      }
     }
 
     // Hit-test the POINTER, not the card. The aim should match the finger, not
@@ -150,11 +168,22 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
     active = false;
     pointerId = null;
 
-    const destination = resolveDrop(pointerX, pointerY, cardId, { lifted });
+    let destination = resolveDrop(pointerX, pointerY, cardId, { lifted });
+
+    // Dropping a GROUP only understands "onto a board". A column drop asks
+    // where in the stack each one goes, and there is no honest answer for
+    // several at once — so a group over a column is a reposition, not a file.
+    if (companions.length && destination && destination.kind !== "board") destination = null;
+
     showFeedback(null);
 
     el.classList.remove("is-dragging");
     el.style.transform = "";
+
+    for (const id of companions) {
+      const other = elementFor(id);
+      if (other) other.style.transform = "";
+    }
 
     if (lifted) {
       el.classList.remove("is-lifted");
@@ -167,19 +196,28 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
     const card = getCard(cardId);
     if (!card) return;
 
-    if (destination && commitDrop(cardId, destination)) return;
+    if (destination && commitDrop(cardId, destination)) {
+      // The group follows it. Each is moved separately because a destination
+      // describes one card's landing, and every card has to survive the trip
+      // even if one of them has gone in the meantime.
+      for (const id of companions) commitDrop(id, destination);
+      return;
+    }
 
     // Nothing to drop onto. A canvas card is repositioned where you left it; a
     // card lifted out of a column snaps back, because it has no x/y to land on.
     if (lifted || (dx === 0 && dy === 0)) return;
 
-    const x = Math.round(clamp(card.x + dx, 0, CANVAS_SIZE - card.w));
-    const y = Math.round(clamp(card.y + dy, 0, CANVAS_SIZE - card.h));
-
+    // One history entry for the whole group, so undo puts them all back at
+    // once rather than one card per press.
     applyChange(() => {
-      const target = getCard(cardId);
-      target.x = x;
-      target.y = y;
+      for (const id of [cardId, ...companions]) {
+        const target = getCard(id);
+        if (!target) continue;
+
+        target.x = Math.round(clamp(target.x + dx, 0, CANVAS_SIZE - target.w));
+        target.y = Math.round(clamp(target.y + dy, 0, CANVAS_SIZE - target.h));
+      }
     });
   };
 

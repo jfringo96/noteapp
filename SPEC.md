@@ -43,7 +43,8 @@ one of these, take the simpler path instead.
 - Connector arrows between cards. (Free-standing lines and arrows are a
   different thing and are built — they are not attached to anything.)
 - Link preview cards that scrape metadata.
-- Multi-select or marquee selection.
+- ~~Multi-select or marquee selection.~~ Built: drag a box over the board to
+  select what it touches, then move, file or delete them together.
 - Snapping or alignment guides.
 - Any server, sync, accounts, login, or permissions.
 - A mobile version of the app. The phone gets an exported gallery, nothing more.
@@ -277,11 +278,18 @@ focus and swallow gestures.
 
 ---
 
-### Moving around
+### Moving around, and selecting several
 
-Dragging empty canvas moves the board under the pointer. It waits a few pixels
-before starting, so a plain click still deselects and a double-click still opens
-the card picker.
+**Right-drag** empty canvas moves the board. **Left-drag** draws a selection box
+and selects every top-level card it touches — touches, not encloses. Both wait a
+few pixels first, so a plain click still deselects and a double-click still opens
+the card picker. The canvas swallows the context menu.
+
+Cards in a column are not selectable this way; they belong to the column.
+
+A selection can be dragged as one, dropped onto a board as one, and deleted from
+the rail. It cannot be filed into a column — a column drop asks where in the
+stack each card goes, and there is no honest answer for several at once.
 
 ---
 

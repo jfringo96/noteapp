@@ -83,7 +83,14 @@ export const getTopLevelCard = (id) => currentBoard().cards.find((c) => c.id ===
 const undoStack = [];
 const redoStack = [];
 let editSnapshot = null;
-let selectedId = null;
+/**
+ * What is selected, as a list.
+ *
+ * One card most of the time; several after a marquee drag. Kept as a list
+ * rather than a single id plus a set, so there is one answer to "what is
+ * selected" and no way for the two to disagree.
+ */
+let selectedIds = [];
 
 /**
  * Set once at startup by main.js. Using hooks rather than importing the canvas
@@ -195,14 +202,25 @@ export function redo() {
 }
 
 function afterHistoryJump() {
-  if (selectedId && !getCard(selectedId)) selectedId = null;
+  selectedIds = selectedIds.filter((id) => getCard(id));
   hooks.render();
   hooks.dirty();
 }
 
 /* ------------------------------------------------------------- selection --- */
 
-export const getSelectedId = () => selectedId;
+/**
+ * The selected card when there is exactly one.
+ *
+ * Null with none selected AND with several, which is what most callers want:
+ * the inspector's per-card tools, focusing a new card, the picker. Anything
+ * that means "everything selected" asks `getSelectedIds()` instead.
+ */
+export const getSelectedId = () => (selectedIds.length === 1 ? selectedIds[0] : null);
+
+export const getSelectedIds = () => [...selectedIds];
+export const isSelected = (id) => selectedIds.includes(id);
+export const selectionSize = () => selectedIds.length;
 
 /**
  * Selection is a view operation, not a history entry — but it does bring the
@@ -213,8 +231,10 @@ export const getSelectedId = () => selectedId;
  * the click is landing on and swallows focus for textareas.
  */
 export function select(id) {
-  if (selectedId === id) return;
-  selectedId = id;
+  if (selectedIds.length === 1 && selectedIds[0] === id) return;
+  if (!id && !selectedIds.length) return;
+
+  selectedIds = id ? [id] : [];
 
   // Bring to front, but only for cards on the board itself. A card inside a
   // column has no z-order — reordering there would silently move it up the
@@ -225,6 +245,22 @@ export function select(id) {
     if (i >= 0 && i !== cards.length - 1) cards.push(cards.splice(i, 1)[0]);
   }
 
+  hooks.stacking();
+  hooks.chrome();
+}
+
+/**
+ * Selects several at once — what a marquee drag produces.
+ *
+ * Nothing is brought to the front here. Reordering a group would shuffle their
+ * z-order against each other for no reason anyone asked for, and selecting is
+ * not meant to rearrange the board.
+ */
+export function selectMany(ids) {
+  const live = ids.filter((id) => getCard(id));
+  if (live.length === selectedIds.length && live.every((id, i) => id === selectedIds[i])) return;
+
+  selectedIds = live;
   hooks.stacking();
   hooks.chrome();
 }
@@ -313,8 +349,8 @@ export function deleteCard(id) {
     const entry = findCardEntry(id);
     if (entry) entry.list.splice(entry.index, 1);
   });
-  if (selectedId === id) {
-    selectedId = null;
+  if (selectedIds.includes(id)) {
+    selectedIds = selectedIds.filter((other) => other !== id);
     hooks.chrome();
   }
 }
@@ -337,7 +373,7 @@ export function setCurrentBoard(id) {
 
   commitEdit();
   state.currentBoardId = id;
-  selectedId = null;
+  selectedIds = [];
 
   hooks.render();
   hooks.dirty();
@@ -360,7 +396,7 @@ export function loadDoc(doc) {
   undoStack.length = 0;
   redoStack.length = 0;
   editSnapshot = null;
-  selectedId = null;
+  selectedIds = [];
 
   return repaired;
 }

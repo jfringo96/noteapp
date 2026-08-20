@@ -9,7 +9,7 @@
  * That single constraint is what keeps lookup, layout and dragging tractable.
  */
 
-import { applyChange, commitEdit, getCard, getSelectedId, stashEdit, touch } from "../store.js";
+import { applyChange, commitEdit, getCard, getSelectedIds, stashEdit, touch } from "../store.js";
 import { describeContents } from "../boards.js";
 
 // Set by cards/index.js at load. Avoids a cycle: index.js imports this module
@@ -109,7 +109,7 @@ export function update(card, el) {
 function syncItems(card, el) {
   const host = el.__columnItems;
   const known = el.__itemEls;
-  const selectedId = getSelectedId();
+  const selected = new Set(getSelectedIds());
   const seen = new Set();
 
   card.items.forEach((item, index) => {
@@ -124,7 +124,7 @@ function syncItems(card, el) {
     // scrollHeight, and an element outside the document has no height to read.
     if (host.children[index] !== itemEl) host.insertBefore(itemEl, host.children[index] || null);
 
-    renderItem.update(itemEl, item, index, selectedId);
+    renderItem.update(itemEl, item, index, selected);
     seen.add(item.id);
   });
 

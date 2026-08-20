@@ -28,6 +28,15 @@ export const LINE_COLOUR = "#2b3240";
 export const LINE_WIDTHS = [1, 2, 3, 5, 8];
 export const LINE_WIDTH_DEFAULT = 2;
 
+/**
+ * How far the pointer travels before a press becomes a drag.
+ *
+ * Shared by card dragging, panning and the marquee, because they all answer
+ * the same question — was that a click? — and answering it differently in
+ * different places is how a click starts landing sometimes.
+ */
+export const DRAG_THRESHOLD = 4;
+
 /** Below this, a drag was a click that wobbled rather than a line. */
 export const LINE_MIN_LENGTH = 12;
 

@@ -742,6 +742,57 @@ So `icons.js` has three SVGs: a paperclip, a line and an arrow. Built with
 somewhere markup gets injected. `tool()` takes a Node or a string, and
 everything else stays a glyph.
 
+### Marquee selection, and pan moving to the right button
+
+`SPEC.md` ruled out multi-select and marquee selection. Asked for directly, so
+built — the non-goal is struck rather than quietly ignored.
+
+**The button swap is the interesting part.** Panning was on the left button, and
+a marquee needs the left button more: you reach for the board constantly, and a
+selection box has nowhere else sensible to live. The alternative was a modifier
+key, which is a gesture nothing advertises. So panning went to the right button,
+which nothing else was using, and the canvas swallows `contextmenu` so the OS
+menu doesn't appear every time you move the board.
+
+**Selection became a list**, not an id. `getSelectedId()` still exists and still
+returns one card — but null when several are selected, which is what nearly
+every caller wants: the per-card inspector tools, focusing a new card. Anything
+meaning "everything selected" asks `getSelectedIds()`. One source of truth, so
+the single and the many can't disagree.
+
+**Marquee selects what it touches**, not what it encloses. A box you have to
+draw completely around things is fiddly on a board where cards overlap.
+
+Cards inside a column are deliberately not selectable this way. They belong to
+the column, and a selection holding some of a column's rows but not the column
+has no honest answer for what dragging it should do.
+
+**Dragging a group** moves every selected element on the same offset and commits
+once, so undo puts them all back together rather than one card per press.
+Grabbing a card already in the group keeps the group; grabbing one outside it
+selects just that card, which is how you get out.
+
+A group can be dropped onto a board. It cannot be dropped into a column: a
+column drop asks where in the stack each card goes, and there is no honest
+answer for several at once — so a group over a column repositions instead of
+filing, and the drop line never appears.
+
+**Deleting a group is armed, in the rail**, and the Delete key refuses when
+several are selected and says where to go instead. One keypress removing a dozen
+cards is a lot to take back even with undo, and the rail is already showing what
+is selected.
+
+### The blue stripe was text selection
+
+Dragging across the board painted a selection highlight over whatever it
+crossed. Nothing on the canvas is text you would want to select by dragging
+past it, so the canvas is `user-select: none` — and the text you *do* select
+lives in fields, which are given it back explicitly.
+
+The three drag thresholds are one constant now. Card dragging, panning and the
+marquee all answer the same question — was that a click? — and answering it
+differently in different places is how a click starts landing sometimes.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

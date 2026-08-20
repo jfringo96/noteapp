@@ -25,8 +25,11 @@ import {
   applyChange,
   commitEdit,
   deleteCard,
+  findCardEntry,
   getCard,
   getSelectedId,
+  getSelectedIds,
+  select,
   stashEdit,
   touch,
 } from "./store.js";
@@ -56,11 +59,20 @@ export function refreshInspector() {
 
   const id = getSelectedId();
   const card = id ? getCard(id) : null;
+  const many = getSelectedIds();
 
   // Rebuilt wholesale on purpose: it is a handful of buttons, it holds no
   // caret, and nothing in it is mid-gesture when the selection changes.
   panel.replaceChildren();
   panel.classList.toggle("is-empty", !card);
+
+  // Several selected: nothing per-card makes sense, so the rail says how many
+  // and offers the one thing that applies to all of them.
+  if (many.length > 1) {
+    panel.classList.remove("is-empty");
+    panel.append(selectionCount(many.length), deleteManyTool(many));
+    return;
+  }
 
   // With nothing selected the rail is where you pick what to add, like
   // Milanote's. It is the same rail either way, so the canvas never shifts.
@@ -103,6 +115,60 @@ export function refreshInspector() {
 }
 
 /* ----------------------------------------------------------------- tools --- */
+
+/* ------------------------------------------------------------ a selection --- */
+
+function selectionCount(count) {
+  const label = document.createElement("p");
+  label.className = "tool-count";
+  label.textContent = `${count} selected`;
+  return label;
+}
+
+/**
+ * Deletes everything selected, armed rather than modal.
+ *
+ * Same reasoning as deleting a picture everywhere: the question is only
+ * "sure?", so a second click answers it without a dialog covering the board you
+ * are looking at. One history entry, so undo brings the whole lot back.
+ */
+function deleteManyTool(ids) {
+  let armed = false;
+  let timer = null;
+
+  const button = tool("Delete", "×", () => {
+    const label = button.querySelector(".tool-label");
+
+    if (!armed) {
+      armed = true;
+      button.classList.add("is-armed");
+      label.textContent = "Sure?";
+
+      timer = setTimeout(() => {
+        armed = false;
+        button.classList.remove("is-armed");
+        label.textContent = "Delete";
+      }, 4000);
+
+      return;
+    }
+
+    clearTimeout(timer);
+
+    applyChange(() => {
+      for (const id of ids) {
+        const entry = findCardEntry(id);
+        if (entry) entry.list.splice(entry.index, 1);
+      }
+    });
+
+    select(null);
+    onStatus(`Deleted ${ids.length} cards — Ctrl+Z to undo`);
+  });
+
+  button.classList.add("tool-danger");
+  return button;
+}
 
 /* --------------------------------------------------------------- drawing --- */
 
