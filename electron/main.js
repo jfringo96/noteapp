@@ -82,8 +82,64 @@ app.whenReady().then(async () => {
     return result;
   });
 
-  ipcMain.handle("dataDir:path", () => storage.dataDir());
-  ipcMain.handle("dataDir:reveal", () => shell.openPath(storage.dataDir()));
+  ipcMain.handle("dataDir:path", () => storage.collectionDir());
+  ipcMain.handle("dataDir:reveal", () => shell.openPath(storage.collectionDir()));
+
+  /* ------------------------------------------------------- collections --- */
+
+  ipcMain.handle("collection:current", () => storage.currentCollection());
+  ipcMain.handle("collection:list", () => storage.listCollections());
+
+  ipcMain.handle("collection:open", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "Open a collection",
+      buttonLabel: "Open collection",
+      defaultPath: storage.collectionsRoot(),
+      properties: ["openDirectory"],
+    });
+
+    if (result.canceled) return null;
+
+    const opened = await storage.openCollection(result.filePaths[0]);
+    // Not a collection, rather than an error: the folder picker will happily
+    // let you choose Documents, and saying so beats a stack trace.
+    return opened || { error: "not-a-collection" };
+  });
+
+  ipcMain.handle("collection:openPath", async (_event, dir) => {
+    const opened = await storage.openCollection(dir);
+    return opened || { error: "not-a-collection" };
+  });
+
+  /**
+   * New and Save As both ask for a folder that does not exist yet, so both use
+   * the SAVE dialog and treat what comes back as a folder to create. A folder
+   * picker can only choose something already there, which would mean making
+   * the folder in Explorer first.
+   */
+  const askForNewFolder = (title, buttonLabel) =>
+    dialog.showSaveDialog({
+      title,
+      buttonLabel,
+      defaultPath: path.join(storage.collectionsRoot(), "Untitled collection"),
+      properties: ["createDirectory"],
+    });
+
+  ipcMain.handle("collection:new", async (_event, doc) => {
+    const result = await askForNewFolder("New collection", "Create collection");
+    if (result.canceled) return null;
+
+    const made = await storage.createCollection(result.filePath, doc);
+    return made || { error: "exists" };
+  });
+
+  ipcMain.handle("collection:saveAs", async (_event, doc) => {
+    const result = await askForNewFolder("Save collection as", "Save collection");
+    if (result.canceled) return null;
+
+    const saved = await storage.saveCollectionAs(result.filePath, doc);
+    return saved || { error: "exists" };
+  });
 
   /**
    * Opening a link hands a string from the page to the operating system, so

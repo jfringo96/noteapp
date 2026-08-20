@@ -20,7 +20,9 @@ import {
 } from "./store.js";
 
 import { moveCard } from "./move.js";
-import { hide as hideSwitcher, initSwitcher, refresh as refreshSwitcher } from "./switcher.js";
+import { hideMap, initMap, refreshMap } from "./map.js";
+import { initFileMenu } from "./filemenu.js";
+import { collectionName, initCollection } from "./collection.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
 
 import {
@@ -42,6 +44,7 @@ import { initLightbox, isOpen as lightboxOpen } from "./lightbox.js";
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
 import { imageFilesFrom, sweepImages } from "./images.js";
+import { isHome } from "./boards.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -52,7 +55,7 @@ const undoBtn = $("undoBtn");
 const redoBtn = $("redoBtn");
 const backBtn = $("backBtn");
 const crumbsEl = $("crumbs");
-const switcherEl = $("switcher");
+const collectionEl = $("collectionName");
 
 /* ---------------------------------------------------------------- chrome --- */
 
@@ -61,13 +64,23 @@ function updateChrome() {
 
   if (document.activeElement !== titleInput) titleInput.value = currentBoard().title;
 
+  // Home is the root of the Map and the first crumb in every trail, so its
+  // name is fixed. Read-only rather than hidden: the name still belongs on
+  // screen, it just isn't yours to change.
+  const home = isHome(state.currentBoardId);
+  titleInput.readOnly = home;
+  titleInput.classList.toggle("is-fixed", home);
+  titleInput.title = home ? "Home is always called Home" : "";
+
+  collectionEl.textContent = collectionName();
+
   undoBtn.disabled = !canUndo();
   redoBtn.disabled = !canRedo();
   backBtn.disabled = !canGoBack();
   emptyEl.hidden = currentBoard().cards.length > 0;
 
   renderCrumbs();
-  refreshSwitcher();
+  refreshMap();
   refreshInspector();
 }
 
@@ -75,14 +88,15 @@ function renderCrumbs() {
   const list = crumbs();
   crumbsEl.replaceChildren();
 
-  // One crumb is just the board you're on, which the title already says.
+  // A single crumb means you are standing on Home, and the title beside it
+  // already says so.
   if (list.length < 2) return;
 
   list.forEach((crumb, index) => {
     if (index > 0) {
       const sep = document.createElement("span");
       sep.className = "crumb-sep";
-      sep.textContent = "/";
+      sep.textContent = "›";
       sep.setAttribute("aria-hidden", "true");
       crumbsEl.appendChild(sep);
     }
@@ -120,7 +134,8 @@ setHooks({
 
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
-initSwitcher(switcherEl, $("boardsBtn"), setStatus);
+initMap($("map"), $("mapBtn"), setStatus);
+initFileMenu($("fileMenu"), $("fileBtn"));
 
 // `repaint` is the plain render, not the store hook: dragging around the colour
 // wheel fires continuously, and there is no need to rebuild the chrome — which
@@ -141,6 +156,14 @@ setDropHandlers({
     }
 
     return true;
+  },
+});
+
+await initCollection({
+  status: setStatus,
+  reloaded: () => {
+    render();
+    updateChrome();
   },
 });
 
@@ -199,6 +222,8 @@ $("exportBtn").addEventListener("click", () => exportBoardImages(setStatus));
 titleInput.addEventListener("focus", stashEdit);
 
 titleInput.addEventListener("input", () => {
+  if (isHome(state.currentBoardId)) return;
+
   stashEdit();
   currentBoard().title = titleInput.value;
   touch();
@@ -226,7 +251,7 @@ window.addEventListener("keydown", (event) => {
   }
 
   if (event.key === "Escape") {
-    hideSwitcher();
+    hideMap();
     return;
   }
 

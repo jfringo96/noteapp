@@ -363,6 +363,90 @@ A colour duplicated in two languages is going to drift again; it's noted rather
 than solved, because the alternative is plumbing CSS into the main process for
 one value.
 
+### A collection is a folder, not a file (2026-08-20)
+
+Collections are the layer above boards — the whole document, with Home at its
+root. The question was what one is on disk.
+
+Considered a single `.json` file that could live anywhere, with every picture
+staying in one shared `images/` pool. Rejected. Two things killed it:
+
+- **No collection would be complete on its own.** A file copied to a USB stick
+  opens with every picture missing, because the pictures never came with it.
+- **The image sweep becomes unsafe.** Deleting unreferenced pictures at startup
+  is only sound if "unreferenced" can be decided. With a shared pool it would
+  mean "unreferenced by every collection that exists" — and the first
+  collection the app had never been shown would lose all of its images. The
+  fallback was to stop cleaning up at all.
+
+A folder makes both go away: copy it and the whole thing travels, and the sweep
+is correct again because its scope is the collection it belongs to.
+
+The worry that prompted the question was duplicate pictures, and it is worth
+being clear about what was never at risk: **inside** a collection, one picture
+on five boards is one file. Cards hold an `imageId` and the file is stored once.
+Duplication only happens across two different collections, which are separate
+documents by definition. One extra copy in that case beats every collection
+being incomplete.
+
+The name of a collection is its folder name, deliberately. Storing it inside
+the file as well would mean two names that could disagree, and renaming would
+need the app. This way it's Explorer.
+
+### There is no Save, and Save As is not a snapshot
+
+Work has always saved continuously, and a File menu is not a reason to stop.
+So the menu changes *where* the writes go rather than whether they happen:
+Save As copies the collection somewhere new and carries on working there.
+
+That's the document-app convention and it is worth stating out loud, because
+the other reading — Save As writes a copy and leaves you in the original — is
+what "save a state" sounds like it means. Anyone wanting a frozen snapshot
+copies the folder in Explorer, which works precisely because a collection is a
+folder.
+
+Save As does not reload anything. The document on screen is already the one
+being saved; only its destination changed. Reloading would throw away the undo
+history and flicker the canvas to redraw the identical thing.
+
+### Home is fixed, and the trail is rooted at it
+
+Every collection has a Home board. It cannot be renamed or deleted, because the
+Map draws outward from it and every breadcrumb trail starts there — a collection
+with no root leaves the Map with nothing to hang boards off.
+
+The rule is enforced when a document *loads*, not merely when one is created.
+The file is deliberately readable, which makes it deliberately editable, and a
+document from before Home existed is exactly what the current collection was.
+A repaired document is written straight back rather than waiting for the next
+edit, so the file agrees with the screen even if the app is killed rather than
+closed.
+
+Rooting the trail at Home is a separate thing from the trail being a walked
+route, and both are true: Home is a fixed root, the crumbs after it are only
+boards actually walked through. Landing somewhere by undo or a Map jump gives
+`Home / Wherever` rather than a lone crumb with no context.
+
+### The Map draws a tree over a graph
+
+Boards nest by reference, so the board structure is a graph — one board can be
+linked from several places, and two can point at each other. A nested list has
+to make a tree of that without lying:
+
+- A board linked twice appears twice. It really is in both places.
+- A branch that loops back to a board already above it in the same line stops
+  there and is labelled, rather than recursing until the stack gives out.
+- Depth is capped as a backstop.
+
+Each row carries the path the Map walked to reach it, which is the nice part:
+clicking a board sets the breadcrumbs to the route the Map just showed you,
+instead of throwing away a route it was holding all along. That's what the
+`"path"` navigation mode is for.
+
+Boards nothing links to get a section of their own at the bottom. Deleting a
+board card leaves the board it pointed at alive and deliberately so — without
+that section, those boards would exist with no way to reach them.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

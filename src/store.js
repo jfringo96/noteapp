@@ -14,14 +14,14 @@
  *   3. Gestures move pixels, then commit once              → see gestures.js
  */
 
-import { HISTORY_LIMIT, DEFAULT_SIZE, MIN_SIZE, uid } from "./constants.js";
+import { HISTORY_LIMIT, DEFAULT_SIZE, HOME_ID, HOME_TITLE, MIN_SIZE, uid } from "./constants.js";
 
 export function emptyDoc() {
   return {
     version: 1,
-    currentBoardId: "b_home",
+    currentBoardId: HOME_ID,
     boards: {
-      b_home: { id: "b_home", title: "Untitled board", cards: [] },
+      [HOME_ID]: { id: HOME_ID, title: HOME_TITLE, cards: [] },
     },
   };
 }
@@ -321,11 +321,57 @@ export function setCurrentBoard(id) {
 
 /* -------------------------------------------------------------- document --- */
 
-/** Replaces the whole document — startup, or import. Clears history with it. */
+/**
+ * Replaces the whole document — startup, or import. Clears history with it.
+ *
+ * Returns true when the document had to be repaired on the way in, so the
+ * caller can write the repaired version back rather than leaving the file
+ * disagreeing with what is on screen.
+ */
 export function loadDoc(doc) {
+  const repaired = normalise(doc);
+
   state = doc;
   undoStack.length = 0;
   redoStack.length = 0;
   editSnapshot = null;
   selectedId = null;
+
+  return repaired;
+}
+
+/**
+ * Makes a document obey the rules before anything renders it.
+ *
+ * Every collection has a Home board and it is always called Home. Enforcing
+ * that here rather than trusting the file means it holds for documents written
+ * before Home existed, for one hand-edited on disk, and for anything imported —
+ * all of which are ordinary, because the file is deliberately readable and
+ * therefore deliberately editable.
+ *
+ * The cost of getting this wrong is not cosmetic: the Map draws outward from
+ * Home and every breadcrumb trail starts there, so a document without one has
+ * no root to show boards under.
+ */
+function normalise(doc) {
+  let changed = false;
+
+  if (!doc.boards[HOME_ID]) {
+    doc.boards[HOME_ID] = { id: HOME_ID, title: HOME_TITLE, cards: [] };
+    changed = true;
+  }
+
+  if (doc.boards[HOME_ID].title !== HOME_TITLE) {
+    doc.boards[HOME_ID].title = HOME_TITLE;
+    changed = true;
+  }
+
+  // A currentBoardId pointing at a board that isn't there renders nothing at
+  // all, and there is no terminal to fix it from.
+  if (!doc.boards[doc.currentBoardId]) {
+    doc.currentBoardId = HOME_ID;
+    changed = true;
+  }
+
+  return changed;
 }

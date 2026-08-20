@@ -37,12 +37,15 @@ export async function loadFromDisk() {
 
   if (doc && doc.error === "corrupt") {
     loadDoc(emptyDoc());
-    onStatus("boards.json could not be read. The old file was kept as " + doc.movedTo);
+    onStatus("This collection could not be read. The old file was kept as " + doc.movedTo);
     return "corrupt";
   }
 
   if (doc && doc.boards) {
-    loadDoc(doc);
+    // A document repaired on the way in — a collection from before Home
+    // existed, say — is written straight back, so the file agrees with what
+    // is on screen without waiting for the next edit.
+    if (loadDoc(doc)) scheduleSave();
     return "loaded";
   }
 

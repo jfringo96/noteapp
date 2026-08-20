@@ -9,10 +9,17 @@
 <body>
 
   <header class="topbar">
-    <button id="backBtn" class="icon-btn" title="Back" aria-label="Back">←</button>
-    <button id="boardsBtn" class="icon-btn" title="All boards" aria-label="All boards">Boards</button>
+    <div class="topbar-menus">
+      <button id="fileBtn" class="menu-btn" aria-haspopup="menu" aria-expanded="false">File</button>
+      <button id="mapBtn" class="menu-btn" aria-haspopup="menu" aria-expanded="false"
+              title="Every board in this collection">Map</button>
+      <span id="collectionName" class="collection-name" title="The open collection"></span>
+    </div>
 
-    <nav id="crumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
+    <div class="topbar-where">
+      <button id="backBtn" class="icon-btn" title="Back" aria-label="Back">←</button>
+      <nav id="crumbs" class="crumbs" aria-label="Breadcrumbs"></nav>
+    </div>
 
     <input id="title" class="board-title" aria-label="Board title" spellcheck="false">
 
@@ -32,7 +39,8 @@
   </main>
 
   <div id="picker" class="picker" role="menu" aria-label="Add a card" hidden></div>
-  <div id="switcher" class="switcher" role="menu" aria-label="All boards" hidden></div>
+  <div id="fileMenu" class="menu" role="menu" aria-label="File" hidden></div>
+  <div id="map" class="menu menu-map" role="menu" aria-label="Map of every board" hidden></div>
 
   <div id="lightbox" class="lightbox" role="dialog" aria-label="Picture viewer" hidden>
     <div class="lightbox-stage">

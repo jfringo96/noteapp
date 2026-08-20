@@ -9,7 +9,7 @@
  */
 
 import { applyChange, currentBoard, state } from "./store.js";
-import { DEFAULT_SIZE, uid } from "./constants.js";
+import { DEFAULT_SIZE, HOME_ID, MAP_MAX_DEPTH, uid } from "./constants.js";
 
 /** Creates an empty board and returns its id. Does not navigate. */
 export function createBoard(title = "Untitled board") {
@@ -28,6 +28,7 @@ export function createBoard(title = "Untitled board") {
  * referenced went away would be worse than showing the breakage.
  */
 export function deleteBoard(id) {
+  if (id === HOME_ID) return false; // Home is the root; there is no collection without it
   if (!state.boards[id] || Object.keys(state.boards).length <= 1) return false;
 
   applyChange(() => {
@@ -42,21 +43,18 @@ export function deleteBoard(id) {
   return true;
 }
 
+/** Home keeps its name. Everything else is renamable. */
 export function renameBoard(id, title) {
+  if (id === HOME_ID) return false;
+
   const board = state.boards[id];
-  if (board) board.title = title;
+  if (!board) return false;
+
+  board.title = title;
+  return true;
 }
 
-/** Every board, for the switcher. Current board first, then alphabetical. */
-export function boardSummaries() {
-  return Object.values(state.boards)
-    .map((board) => ({ id: board.id, title: board.title, count: board.cards.length }))
-    .sort((a, b) => {
-      if (a.id === state.currentBoardId) return -1;
-      if (b.id === state.currentBoardId) return 1;
-      return a.title.localeCompare(b.title);
-    });
-}
+export const isHome = (id) => id === HOME_ID;
 
 /**
  * What a board card should show. Returns null when the target is missing, so
@@ -134,4 +132,88 @@ export function addBoardCard(x, y, title = "Untitled board") {
   });
 
   return { boardId, cardId };
+}
+
+/* ------------------------------------------------------------------- map --- */
+
+/** Every board a card on this board points at, in the order they're laid out. */
+function childBoardIds(board) {
+  const ids = [];
+
+  const collect = (card) => {
+    if (card.type === "board" && card.targetBoardId) ids.push(card.targetBoardId);
+  };
+
+  for (const card of [...board.cards].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    collect(card);
+    // A board card inside a column is still a link to that board, and columns
+    // are where boards most often get put.
+    if (card.type === "column") card.items.forEach(collect);
+  }
+
+  return ids;
+}
+
+/**
+ * The Map: a nested list of every board, drawn outward from Home.
+ *
+ * Boards nest BY REFERENCE, so what this walks is a graph, not a tree — one
+ * board can be linked from several places and two can point at each other.
+ * Three rules make a tree out of that without lying about it:
+ *
+ *   1. A board linked from two places appears in both. It really is in both.
+ *   2. A branch that loops back to a board already above it in the same line
+ *      stops there and says so. That is what makes a cycle terminate.
+ *   3. Depth is capped, so a long chain can't run away.
+ *
+ * Each node carries the `path` the Map walked to reach it, which is what lets
+ * clicking a board set breadcrumbs to the route shown rather than dumping you
+ * there with no trail.
+ */
+export function boardTree() {
+  const seen = new Set();
+
+  const node = (id, ancestors) => {
+    const board = state.boards[id];
+    if (!board) return null;
+
+    seen.add(id);
+
+    const path = [...ancestors, id];
+    const looped = ancestors.includes(id);
+    const deep = path.length > MAP_MAX_DEPTH;
+
+    return {
+      id,
+      title: board.title,
+      count: board.cards.length,
+      path,
+      looped,
+      children:
+        looped || deep
+          ? []
+          : childBoardIds(board)
+              .map((childId) => node(childId, path))
+              .filter(Boolean),
+    };
+  };
+
+  const root = node(HOME_ID, []);
+
+  // Boards nothing links to are still real and still hold cards — a board card
+  // can be deleted while the board it pointed at stays. Losing them from the
+  // Map would make them unreachable, so they get their own section.
+  const orphans = Object.values(state.boards)
+    .filter((board) => !seen.has(board.id))
+    .map((board) => ({
+      id: board.id,
+      title: board.title,
+      count: board.cards.length,
+      path: [board.id],
+      looped: false,
+      children: [],
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  return { root, orphans };
 }

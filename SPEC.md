@@ -63,20 +63,62 @@ larger doesn't matter for one user on one machine.
 
 ---
 
-## Storage on disk
+## Collections
 
-Default location `Documents\Noteapp\`:
+A **collection** is the layer above boards: the whole document. Boards live
+inside one, **Home** at the root, everything else nested under it by board
+cards. One collection is open at a time.
+
+A collection is a **folder**, not a file:
 
 ```
-Noteapp/
-  boards.json          all boards, human-readable
-  images/
-    img_7fq2xk9.webp
-    img_m3v81ba.webp
+Documents\Noteapp\           every collection lives here by default
+  My Boards\
+    collection.json          all the boards in it, human-readable
+    images\
+      img_7fq2xk9.webp
+      img_m3v81ba.webp
+  Iceland 2027\
+    collection.json
+    images\
 ```
 
-Backup is "put that folder in OneDrive" — version history and off-machine
-copies for free, with nothing to configure.
+A folder rather than a file so a collection is **self-contained**: copy that one
+folder and the boards and their pictures travel together. The alternative — one
+shared pool of images across every collection — makes no collection complete on
+its own, and makes deleting unused pictures unsafe, because "unused" would have
+to mean "unused by every collection that exists".
+
+The collection's **name is its folder name**. Nothing stores it separately, so
+renaming one is renaming the folder in Explorer.
+
+Backup is "put `Documents\Noteapp\` in OneDrive" — version history and
+off-machine copies for free, with nothing to configure.
+
+### The File menu
+
+- **New collection…** — an empty one, with a Home board.
+- **Open collection…** — swap to a different one entirely.
+- **Save as…** — copy this collection, pictures included, to a new folder and
+  carry on working there. It is not a snapshot you return from; it changes
+  where your work is saved from that point on.
+- Below a separator, any other collection in the default folder, to save a trip
+  through the folder picker.
+
+There is no **Save**. Work saves continuously into the open collection, as it
+always has.
+
+**On launch, the collection you had open last opens by itself.** Which one that
+is lives in Electron's userData, not in the boards folder — it is a preference,
+not data. If it has gone missing, fall back: any collection in the default
+folder, then a fresh one. Every branch has to end with a working app.
+
+### Home
+
+Every collection has a Home board. It is always called Home, and it cannot be
+renamed or deleted — it is the root the Map draws from and the first crumb in
+every trail. Enforce it when a document loads rather than trusting the file,
+since the file is deliberately readable and therefore deliberately editable.
 
 Write `boards.json` atomically: write a temp file alongside it, then rename
 over the original. A crash mid-write must never leave a truncated file where my
@@ -388,10 +430,32 @@ board can be linked from several places and two boards can point at each other,
 so there is no canonical path. Cap it, and repair it against reality after an
 import or a board deletion.
 
-A Back button, kept separately from the trail so it survives a switcher jump.
+Every trail starts at Home. Home is the one board guaranteed to exist, so the
+crumbs say where you are even when you arrived by a route nobody walked — a Map
+jump, an undo, or wherever you were when the app last closed. It is a root, not
+a claim: the crumbs between it and you are only boards actually walked through.
 
-A board switcher listing all boards, so I can jump anywhere without walking the
-tree.
+A Back button, kept separately from the trail so it survives a jump.
+
+### The Map
+
+A **Map** button next to File, opening a nested list of every board in the
+collection, drawn outward from Home. It replaced a flat alphabetical list: a
+flat list says what exists, the Map says where things are.
+
+What it draws is a tree over a graph, so three rules keep it honest:
+
+- A board linked from two places **appears in both**. It really is in both.
+- A branch looping back to a board already above it in the same line **stops
+  and says so**, rather than recursing forever.
+- Depth is capped.
+
+Each row knows the route the Map walked to reach it, so clicking one sets the
+breadcrumbs to that route rather than dumping you there with no trail.
+
+Boards nothing links to get their own section at the bottom. A board card can
+be deleted while the board it pointed at stays, and without this they would be
+unreachable.
 
 Navigating is never an undoable action, but it must seal any in-flight edit
 first — otherwise merely walking between boards lands in the undo stack.

@@ -119,6 +119,18 @@ export async function imageUrl(card) {
 }
 
 /**
+ * Drop every cached object URL.
+ *
+ * Called when the open collection changes. The cache is keyed by filename, and
+ * two collections can each hold a picture with the same name — without this,
+ * opening a second collection would show the first one's photographs.
+ */
+export function resetImageCache() {
+  for (const url of urls.values()) URL.revokeObjectURL(url);
+  urls.clear();
+}
+
+/**
  * Delete image files nothing points at.
  *
  * Startup only. Two cards can share an image, and undo can hold a state

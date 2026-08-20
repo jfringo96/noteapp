@@ -21,4 +21,11 @@ contextBridge.exposeInMainWorld("api", {
   chooseExportFolder: () => ipcRenderer.invoke("export:choose"),
   writeExport: (parent, folderName, files) =>
     ipcRenderer.invoke("export:write", parent, folderName, files),
+
+  currentCollection: () => ipcRenderer.invoke("collection:current"),
+  listCollections: () => ipcRenderer.invoke("collection:list"),
+  openCollection: () => ipcRenderer.invoke("collection:open"),
+  openCollectionPath: (dir) => ipcRenderer.invoke("collection:openPath", dir),
+  newCollection: (doc) => ipcRenderer.invoke("collection:new", doc),
+  saveCollectionAs: (doc) => ipcRenderer.invoke("collection:saveAs", doc),
 });

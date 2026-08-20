@@ -41,6 +41,19 @@ export const TYPE_GLYPH = {
  */
 export const COLUMNABLE = ["text", "list", "image", "link", "place", "board"];
 
+/**
+ * Every collection has a Home board, and it is always this id.
+ *
+ * Home is the root the Map draws from and the first crumb in every trail, so
+ * it cannot be renamed or deleted — a collection with no root would leave the
+ * Map with nothing to hang boards off and breadcrumbs starting nowhere.
+ */
+export const HOME_ID = "b_home";
+export const HOME_TITLE = "Home";
+
+/** How deep the Map will draw before it stops following a chain of boards. */
+export const MAP_MAX_DEPTH = 12;
+
 /** Breadcrumbs are capped so a cycle of boards can't grow them forever. */
 export const TRAIL_MAX = 10;
 export const BACK_MAX = 50;
