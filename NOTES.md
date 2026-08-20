@@ -677,6 +677,23 @@ So it compares the list of picture ids it is currently showing against the
 current one and only rebuilds when they differ. That is true precisely when a
 picture is added or deleted, and false while you are typing on a card.
 
+### Dragging empty canvas moves the board
+
+Hold the pointer on empty space and the board follows it — grab the paper and
+pull, rather than pushing a viewport over it.
+
+It waits ~4px before it starts, for exactly the reason card dragging does: a
+plain click on empty space still has to deselect, and a double-click still has
+to open the card picker. Nothing is captured and nothing is prevented until the
+movement has said this is a drag rather than a click. Capturing on pointerdown
+is what broke clicks inside grips the first time round, and it would break both
+of these.
+
+The canvas wears a `grab` cursor to advertise it. `cursor` inherits, though, so
+that had to be stopped at the cards — a card is not the canvas — and text fields
+inside them had to be given their caret back explicitly. Pictures, which drag
+from anywhere on the card, get `grab` on purpose.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

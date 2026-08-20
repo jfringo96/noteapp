@@ -156,6 +156,11 @@ which boards are using it first. Ctrl+Z undoes any of it.
 *Dragging an image out of a web page won't work: that hands over a web address,
 and Noteapp never goes online. Copy the picture and paste it instead.*
 
+## Getting around a board
+
+Drag empty space to move the board around. Clicking empty space still deselects,
+and double-clicking still opens the card picker.
+
 ## Adding cards
 
 Click anything in the left rail to drop it in the middle of the view, or **drag

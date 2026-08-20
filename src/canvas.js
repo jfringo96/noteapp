@@ -57,6 +57,7 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
     if (event.target !== canvas) return;
     hidePicker();
     select(null);
+    startPan(event);
   });
 
   canvas.addEventListener("dblclick", (event) => {
@@ -427,6 +428,60 @@ export function createBoardCard(x, y) {
   el.__boardName.focus();
 }
 
+
+/* ------------------------------------------------------------------- pan --- */
+
+/**
+ * Drag the empty canvas to move around the board.
+ *
+ * Waits for the pointer to travel a few pixels before it starts, for the same
+ * reason card dragging does: a plain click on empty space has to keep
+ * deselecting, and a double-click has to keep opening the card picker. Nothing
+ * is captured and nothing is prevented until the movement says this is a drag
+ * rather than a click.
+ *
+ * The board moves the opposite way to the pointer — grab the paper and pull it,
+ * rather than pushing a viewport around over it.
+ */
+const PAN_THRESHOLD = 4;
+
+function startPan(event) {
+  if (event.button !== 0) return; // left button only; right is the menu
+
+  const from = { x: event.clientX, y: event.clientY };
+  const at = { left: scroller.scrollLeft, top: scroller.scrollTop };
+  let panning = false;
+
+  const move = (moveEvent) => {
+    const dx = moveEvent.clientX - from.x;
+    const dy = moveEvent.clientY - from.y;
+
+    if (!panning) {
+      if (Math.abs(dx) < PAN_THRESHOLD && Math.abs(dy) < PAN_THRESHOLD) return;
+
+      panning = true;
+      canvas.classList.add("is-panning");
+    }
+
+    // Held down and moved: this is a drag, so stop the browser turning it into
+    // a text selection across the whole board.
+    moveEvent.preventDefault();
+
+    scroller.scrollLeft = at.left - dx;
+    scroller.scrollTop = at.top - dy;
+  };
+
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+    window.removeEventListener("pointercancel", stop);
+    canvas.classList.remove("is-panning");
+  };
+
+  window.addEventListener("pointermove", move, { passive: false });
+  window.addEventListener("pointerup", stop);
+  window.addEventListener("pointercancel", stop);
+}
 
 /* ----------------------------------------------------------------- utils --- */
 

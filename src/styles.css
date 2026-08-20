@@ -367,7 +367,12 @@ html, body {
   background-color: var(--ground);
   background-image: radial-gradient(var(--ground-dot) 1px, transparent 1px);
   background-size: 24px 24px;
+  /* Advertises that the empty board can be dragged. A gesture nothing points
+     at may as well not exist. */
+  cursor: grab;
 }
+
+.canvas.is-panning { cursor: grabbing; }
 
 .scroller.is-drop-target { outline: 2px dashed var(--accent); outline-offset: -6px; }
 
@@ -434,11 +439,22 @@ html, body {
   position: absolute;
   display: flex;
   flex-direction: column;
+  /* The canvas under it offers a grab cursor; a card is not the canvas. */
+  cursor: default;
   background: var(--paper);
   color: var(--ink);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
+
+/* Text fields keep a caret. `cursor` inherits, so without this they would take
+   the card's default and stop looking editable. */
+.card textarea,
+.card input[type="text"] { cursor: auto; }
+
+/* Pictures and boards drag from anywhere on the card, so say so. */
+.card-image { cursor: grab; }
+.card-image.is-dragging { cursor: grabbing; }
 
 .card.is-selected { box-shadow: var(--shadow), 0 0 0 2px var(--accent); }
 

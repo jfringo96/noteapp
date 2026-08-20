@@ -276,6 +276,14 @@ focus and swallow gestures.
 
 ---
 
+### Moving around
+
+Dragging empty canvas moves the board under the pointer. It waits a few pixels
+before starting, so a plain click still deselects and a double-click still opens
+the card picker.
+
+---
+
 ## Undo/redo
 
 Implement in Phase 1, not later. Retrofitting this is miserable.
