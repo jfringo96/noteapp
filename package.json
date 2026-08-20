@@ -1,8 +1,8 @@
 {
-  "name": "board-app",
+  "name": "noteapp",
   "version": "0.1.0",
   "private": true,
-  "description": "A personal Milanote-style board app.",
+  "description": "Noteapp — a personal Milanote-style board app.",
   "main": "electron/main.js",
   "type": "module",
   "scripts": {
@@ -23,12 +23,15 @@
     "wait-on": "^9.0.1"
   },
   "build": {
-    "appId": "uk.co.stonemanphotography.boardapp",
-    "productName": "Board App",
+    "appId": "uk.co.stonemanphotography.noteapp",
+    "productName": "Noteapp",
     "files": [
       "electron/**",
       "dist/**"
     ],
+    "directories": {
+      "output": "release"
+    },
     "win": {
       "target": "nsis"
     },

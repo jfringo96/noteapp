@@ -16,8 +16,38 @@ export function dataDir() {
 }
 
 export async function init() {
-  DATA_DIR = path.join(app.getPath("documents"), "Board App");
+  const documents = app.getPath("documents");
+
+  DATA_DIR = path.join(documents, "Noteapp");
+  await migrateFromOldName(path.join(documents, "Board App"), DATA_DIR);
+
   await fs.mkdir(path.join(DATA_DIR, "images"), { recursive: true });
+}
+
+/**
+ * The app was called "Board App" until the folder and the repo were renamed to
+ * Noteapp. Anyone with boards from before that has them in the old folder, so
+ * move it across once, quietly.
+ *
+ * Only ever moves when the new folder does not exist yet — if both are present
+ * the new one wins and the old one is left completely alone. Rename on the same
+ * volume is atomic, so this either happens or it doesn't; it cannot half-happen
+ * and lose notes. Any failure is swallowed: a fresh empty folder is created
+ * below instead, and the old one is still sitting there to copy across by hand.
+ */
+async function migrateFromOldName(oldDir, newDir) {
+  try {
+    await fs.access(newDir);
+    return; // already migrated, or a new install
+  } catch {}
+
+  try {
+    await fs.access(oldDir);
+  } catch {
+    return; // nothing to migrate
+  }
+
+  await fs.rename(oldDir, newDir).catch(() => {});
 }
 
 const docPath = () => path.join(DATA_DIR, "boards.json");

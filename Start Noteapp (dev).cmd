@@ -1,5 +1,5 @@
 @echo off
-title Board App - development
+title Noteapp - development
 cd /d "%~dp0"
 
 rem ---------------------------------------------------------------------------
@@ -9,7 +9,7 @@ rem ---------------------------------------------------------------------------
 tasklist /FI "IMAGENAME eq electron.exe" 2>nul | find /I "electron.exe" >nul
 if %errorlevel%==0 (
   echo.
-  echo   Board App is already running.
+  echo   Noteapp is already running.
   echo.
   echo   Look for the window - it may be behind this one, or on another
   echo   desktop. Any changes made since you opened it are already in there.
@@ -37,12 +37,12 @@ if not exist "node_modules" (
 )
 
 echo.
-echo   Starting Board App.
+echo   Starting Noteapp.
 echo   Leave this window open while you use it. Closing the app stops everything.
 echo.
 
 call npm run dev
 
 echo.
-echo   Board App has stopped.
+echo   Noteapp has stopped.
 pause

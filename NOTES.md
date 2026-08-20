@@ -178,7 +178,7 @@ something actually breaking.
 
 ## Working on it
 
-**Day to day:** double-click `Start Board App (dev).cmd`. It launches Vite and
+**Day to day:** double-click `Start Noteapp (dev).cmd`. It launches Vite and
 Electron together. Edit a file, save, and the window updates on its own —
 usually instantly, without losing what's on the board. No reinstalling.
 
@@ -196,7 +196,7 @@ all and the console mentions something being undefined, that's usually why.
 **Making a real installed copy** — `npm run pack` builds an installer into
 `release/`. Worth doing once the app is genuinely useful, and again whenever
 there's a version worth keeping. The installed copy and the dev copy read the
-same `Documents\Board App\` folder, so there is only ever one set of notes.
+same `Documents\Noteapp\` folder, so there is only ever one set of notes.
 
 ### Controls moved off the cards into a left inspector
 
@@ -336,11 +336,39 @@ Reorder positions are read from **DOM order**, not from the element map. The
 map keeps insertion order, which stops matching what you see the first time
 anything is reordered — and reordering is the entire feature.
 
+### Renamed to Noteapp, with the data folder moved for you (2026-08-20)
+
+The repo, the product name, the launcher and the window title were all some mix
+of "Board App" and "board-app" while the GitHub repo was `noteapp`. One name
+now: **Noteapp**.
+
+The only part with teeth was `Documents\Board App\`, which already had real
+boards in it. `storage.js` renames that folder to `Documents\Noteapp\` once, on
+first launch, and only when the new folder doesn't already exist. A rename on
+one volume is atomic, so it either happens or it doesn't — it cannot half-move
+and lose notes. If it fails, the app starts on an empty folder and the old one
+is untouched next to it.
+
+The `appId` changed too, which is normally the sort of thing that strands an
+installed copy. Safe here only because no installer has ever been built.
+
+### The window's background colour had drifted off the ground
+
+Electron painted `#1b1e24` — the original dark slate — with a comment claiming
+it matched the canvas. The ground has been `#eef0f2` since the Milanote palette
+landed, so every launch opened dark and then flashed light. Now `#eef0f2`, with
+a comment saying to change it alongside `--ground`.
+
+A colour duplicated in two languages is going to drift again; it's noted rather
+than solved, because the alternative is plumbing CSS into the main process for
+one value.
+
 ## Deferred
 
-- **Confirmation on destructive actions** (handoff §5.5). Undo is one keystroke,
-  so this was defensible in the prototype. Revisit at Phase 5, especially for
-  deleting a board that has cards in it.
+- **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one
+  keystroke, so a card going instantly is fine. Deleting a *board* is the case
+  that mattered and it is done — see "Deleting a board is armed, not instant"
+  above. Nothing further is planned here.
 - **Warning when deleting a board that other cards link to** (handoff open
   question 4). Currently they'd become broken links, deliberately.
 - **Undo landing on a board outside the current trail** resets the breadcrumb to
@@ -356,7 +384,3 @@ anything is reordered — and reordering is the entire feature.
   and drag things in for now.
 - **Clearing a card's tint** back to the default. Right now you pick a pale
   colour instead. Fine until it isn't.
-- **The card-type picker on double-click.** `SPEC.md` asks for a small picker at
-  the click point. In Phase 1 there is only one card type, so double-click
-  creates a text card directly — a picker offering one option is pure friction.
-  The picker arrives in Phase 2, when there is a choice to make.

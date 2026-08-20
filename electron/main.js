@@ -20,8 +20,9 @@ function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    // Matches the canvas ground, so there is no white flash before paint.
-    backgroundColor: "#1b1e24",
+    // Matches --ground in styles.css, so there is no flash before paint. If the
+    // ground colour changes, change this with it.
+    backgroundColor: "#eef0f2",
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

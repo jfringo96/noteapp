@@ -1,4 +1,4 @@
-# Board App — Build Spec
+# Noteapp — Build Spec
 
 A personal, single-user Milanote-style board app. Cards on a large canvas, drag
 to arrange. A standalone desktop application that keeps its data in an ordinary
@@ -65,10 +65,10 @@ larger doesn't matter for one user on one machine.
 
 ## Storage on disk
 
-Default location `Documents\Board App\`:
+Default location `Documents\Noteapp\`:
 
 ```
-Board App/
+Noteapp/
   boards.json          all boards, human-readable
   images/
     img_7fq2xk9.webp
