@@ -64,6 +64,9 @@ export const HOME_TITLE = "Home";
  */
 export const BOARD_NAME_MAX = 22;
 
+/** What an unnamed board is called once you stop typing without naming it. */
+export const UNTITLED_BOARD = "Untitled board";
+
 /** How deep the Map will draw before it stops following a chain of boards. */
 export const MAP_MAX_DEPTH = 12;
 
@@ -122,6 +125,22 @@ const EXTENSIONS = {
 };
 
 export const extensionFor = (mime) => EXTENSIONS[mime] || ".bin";
+
+/** The other way round, for a file on disk we know only by its name. */
+const MIME_FOR = Object.fromEntries(
+  Object.entries(EXTENSIONS).map(([mime, extension]) => [extension, mime])
+);
+
+export function mimeForFile(name) {
+  const dot = String(name).lastIndexOf(".");
+  return dot < 0 ? null : MIME_FOR[String(name).slice(dot).toLowerCase()] || null;
+}
+
+/** The id half of an image filename — `img_7fq2xk9.webp` becomes `img_7fq2xk9`. */
+export function imageIdFromFile(name) {
+  const dot = String(name).lastIndexOf(".");
+  return dot < 0 ? String(name) : String(name).slice(0, dot);
+}
 
 /** The file an image card refers to. Derived, never stored. */
 export const imageFileName = (card) => card.imageId + extensionFor(card.mime);

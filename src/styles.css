@@ -1208,3 +1208,125 @@ html, body {
 /* A board being dragged out of the Map onto a canvas. */
 .map-row.is-dragging { opacity: .5; }
 .map-open[draggable="true"] { cursor: grab; }
+
+/* --------------------------------------------------------------- gallery */
+
+.gallery-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Under the confirm dialog (900): deleting a picture asks on top of it. */
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: rgb(20 25 35 / 0.32);
+}
+
+.gallery-backdrop[hidden] { display: none; }
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  width: min(56rem, 100%);
+  max-height: 100%;
+  background: var(--paper);
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgb(20 25 35 / 0.28);
+}
+
+.gallery-head {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .9rem 1rem;
+  border-bottom: 1px solid var(--chrome-line);
+}
+
+.gallery-title { margin: 0; font-size: 1.0625rem; font-weight: 600; color: var(--ink); }
+.gallery-hint { font-size: .8125rem; color: var(--muted); }
+
+.gallery-add {
+  margin-left: auto;
+  padding: .35rem .8rem;
+  font: inherit;
+  font-size: .875rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.gallery-add:hover { background: var(--hover); }
+
+.gallery-close {
+  padding: 0;
+  width: 26px;
+  height: 26px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.gallery-close:hover { color: var(--ink); background: var(--hover); }
+
+.gallery-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: .6rem;
+  padding: .9rem 1rem 1.1rem;
+}
+
+.gallery-empty {
+  grid-column: 1 / -1;
+  margin: 1.5rem 0;
+  font-size: .875rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--muted);
+}
+
+.gallery-tile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--sunken);
+  border-radius: 8px;
+  cursor: grab;
+}
+
+.gallery-tile.is-dragging { opacity: .5; }
+.gallery-tile.is-missing { background: #f3d8d5; }
+.gallery-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.gallery-delete {
+  position: absolute;
+  top: .3rem;
+  right: .3rem;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
+  background: rgb(20 25 35 / 0.55);
+  border: 0;
+  border-radius: 4px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.gallery-tile:hover .gallery-delete { opacity: 1; }
+.gallery-delete:hover { background: var(--danger); }
+
+/* A card type being dragged out of the left rail. */
+.tool.is-dragging { opacity: .5; }
+.tool.is-draggable { cursor: grab; }

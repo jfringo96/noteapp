@@ -13,6 +13,8 @@ import {
   IMAGE_QUALITY,
   extensionFor,
   imageFileName,
+  imageIdFromFile,
+  mimeForFile,
   uid,
 } from "./constants.js";
 
@@ -130,30 +132,87 @@ export function resetImageCache() {
   urls.clear();
 }
 
+
 /**
- * Delete image files nothing points at.
+ * Takes any picture already sitting in the images folder into the gallery.
  *
- * Startup only. Two cards can share an image, and undo can hold a state
- * referencing an image whose card is deleted right now — so mid-session there
- * is no safe moment to decide something is unreferenced.
+ * Run once, on the load that first gives a collection a gallery. Before the
+ * gallery existed, a picture taken off every board became rubbish and the sweep
+ * deleted it on the next launch — so at the moment of the upgrade there can be
+ * perfectly good photographs on disk that no board mentions. Without this they
+ * would be swept minutes later, by the very change meant to stop that
+ * happening.
+ *
+ * Only on that one load. On any later launch a file the gallery doesn't list is
+ * a picture that was deliberately deleted, and adopting it would bring it back.
+ *
+ * The dimensions have to be measured, because a filename doesn't carry them.
+ */
+export async function adoptLooseImages(addEntry) {
+  const files = await window.api.listImages();
+  let adopted = 0;
+
+  for (const name of files) {
+    const mime = mimeForFile(name);
+    if (!mime) continue; // not a picture we wrote
+
+    const bytes = await window.api.readImage(name);
+    if (!bytes) continue;
+
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(new Blob([bytes], { type: mime }));
+    } catch {
+      continue; // unreadable; leave it alone rather than listing a broken tile
+    }
+
+    const added = addEntry(
+      {
+        imageId: imageIdFromFile(name),
+        mime,
+        naturalW: bitmap.width,
+        naturalH: bitmap.height,
+      },
+      ""
+    );
+
+    bitmap.close();
+    if (added) adopted++;
+  }
+
+  return adopted;
+}
+
+/**
+ * Delete image files the gallery doesn't list.
+ *
+ * The question used to be "does a card use this file?", which meant a picture
+ * taken off every board was rubbish. Now the gallery owns pictures in their own
+ * right, so the question is whether it still lists this one — removing a
+ * picture from the gallery is the only thing that makes a file disposable.
+ *
+ * Startup only. Undo can hold a state where a picture is still in the gallery,
+ * so mid-session there is no safe moment to decide a file is finished with.
  */
 export async function sweepImages(state) {
   const keep = new Set();
 
+  for (const entry of state.gallery || []) {
+    keep.add(entry.imageId + extensionFor(entry.mime));
+  }
+
+  // Belt and braces. `normalise()` guarantees every referenced picture is in
+  // the gallery, and if that ever stopped being true this is the difference
+  // between a bug and a deleted photograph.
   const remember = (ref) => {
     if (ref && ref.imageId) keep.add(imageFileName(ref));
   };
 
   for (const board of Object.values(state.boards)) {
-    // A board's cover is an image reference too, and nothing else points at it.
     remember(board.cover);
 
     for (const card of board.cards) {
       if (card.type === "image") remember(card);
-
-      // Cards inside a column are owned by the column, so they are not in
-      // board.cards. Missing them here would delete their files on the next
-      // startup — every image you had put in a column.
       if (card.type === "column") {
         for (const item of card.items) if (item.type === "image") remember(item);
       }

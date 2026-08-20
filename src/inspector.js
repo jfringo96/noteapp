@@ -53,7 +53,7 @@ export function refreshInspector() {
   // Milanote's. It is the same rail either way, so the canvas never shifts.
   if (!card) {
     for (const type of CARD_TYPES) {
-      panel.appendChild(tool(TYPE_LABEL[type], TYPE_GLYPH[type], () => onAdd(type)));
+      panel.appendChild(addTool(type));
     }
     return;
   }
@@ -75,6 +75,40 @@ export function refreshInspector() {
 }
 
 /* ----------------------------------------------------------------- tools --- */
+
+/** How a card type dragged out of the rail identifies itself to the canvas. */
+export const CARD_DRAG_TYPE = "application/x-noteapp-cardtype";
+
+/**
+ * A card type in the rail. Click drops it in the middle of the view; drag it
+ * out to choose where it lands.
+ *
+ * Image is the exception and is not draggable: it opens the gallery, and what
+ * you drag onto the board is a picture from in there rather than the idea of a
+ * picture.
+ */
+function addTool(type) {
+  const button = tool(TYPE_LABEL[type], TYPE_GLYPH[type], () => onAdd(type));
+
+  if (type === "image") {
+    button.title = "Pictures in this collection";
+    return button;
+  }
+
+  button.draggable = true;
+  button.classList.add("is-draggable");
+  button.title = `${TYPE_LABEL[type]} — click to add, or drag onto the board`;
+
+  button.addEventListener("dragstart", (event) => {
+    event.dataTransfer.setData(CARD_DRAG_TYPE, type);
+    event.dataTransfer.effectAllowed = "copy";
+    button.classList.add("is-dragging");
+  });
+
+  button.addEventListener("dragend", () => button.classList.remove("is-dragging"));
+
+  return button;
+}
 
 function tool(label, glyph, onClick) {
   const button = document.createElement("button");

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("api", {
   writeImage: (name, bytes) => ipcRenderer.invoke("image:write", name, bytes),
   readImage: (name) => ipcRenderer.invoke("image:read", name),
   sweepImages: (keep) => ipcRenderer.invoke("image:sweep", keep),
+  listImages: () => ipcRenderer.invoke("image:list"),
   dataDir: () => ipcRenderer.invoke("dataDir:path"),
   revealDataFolder: () => ipcRenderer.invoke("dataDir:reveal"),
   openExternal: (url) => ipcRenderer.invoke("shell:open", url),

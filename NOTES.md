@@ -529,6 +529,79 @@ HTML5 drag-and-drop here rather than the pointer-based gestures the canvas uses
 internally, because this drag starts in a floating panel and ends on the canvas,
 and the file-drop target it lands on already speaks that protocol.
 
+### The gallery: a picture belongs to the collection, not to a board
+
+Before this, an image existed only as a card. A picture nothing pointed at was
+rubbish, and the startup sweep deleted it. That is a coherent design and it is
+the wrong one: it means you cannot import a set of photographs and place them
+later, and taking a picture off a board destroys it.
+
+So the collection has a gallery — every picture it holds, whether a board uses
+one or not. The sweep's question changes from "does a card use this file?" to
+"is this file in the gallery?", and removing a picture from the gallery becomes
+the only thing that makes a file disposable.
+
+It lives in the document rather than being read off the images folder, because a
+picture needs its mime type and natural size to become a card and a folder
+listing knows neither.
+
+Deleting from the gallery cascades to the boards using it, the same way deleting
+a board cascades to its tiles, and for the same reason. It says which boards
+first — but only when there are any. Asking about a picture nothing is using is
+asking for the sake of it.
+
+### Adopting loose files, exactly once
+
+The upgrade has a trap in it. At the moment a collection gains a gallery there
+can be photographs on disk that no board mentions — pictures taken off a board
+before the gallery existed, not yet swept. Building the gallery only from cards
+would leave them unlisted, and the sweep would delete them minutes later. The
+change meant to stop pictures being thrown away would have thrown some away.
+
+So on the load that first creates a gallery, every readable file in the images
+folder is adopted into it, dimensions measured by decoding each one. Before the
+sweep, or there would be nothing left to adopt.
+
+**Only on that load.** `galleryWasCreated()` is true exactly when the document
+had no `gallery` key at all — not when it has an empty one. On any later launch
+a file the gallery does not list is a picture that was deliberately deleted and
+is waiting to be swept, and adopting it would bring it back from the dead.
+
+### Dragging replaces clicking where the position matters
+
+Three things are dragged now that were not: a card type out of the left rail, a
+board out of the Map, and a picture out of the gallery. All three used to be a
+click that put something in the middle of the view.
+
+Clicking still does that, because it is right when you don't care where the
+thing lands. Dragging is for when you do — and for the gallery it is the only
+gesture, since a picture you are placing is one you have an opinion about.
+
+All three use HTML5 drag-and-drop rather than the pointer-based gestures the
+canvas uses internally, because all three start outside the canvas — in a rail
+or a floating panel — and the canvas already speaks that protocol for file
+drops.
+
+### An image dragged from a web page is a URL, not a picture
+
+Copying an image and pasting it works: the clipboard carries the bitmap, and
+nothing goes online. Dragging one out of a browser does not — what arrives is a
+`text/uri-list`, and turning that into a picture means fetching it.
+
+The app makes no outbound requests, which is a stated principle and the reason
+places and links open in the real browser rather than being previewed. So the
+drop says so and points at paste instead, rather than failing silently or
+quietly becoming the first thing here that goes online.
+
+### A new board starts nameless
+
+It used to arrive called "Untitled board" with the text selected, so the first
+thing you saw was a block of blue to type over. Now the field is empty with the
+caret in it, and "Untitled board" is only applied on blur if nothing was typed.
+
+The placeholder says "Untitled board" too, so what you will get if you walk away
+is on screen before you walk away.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

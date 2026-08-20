@@ -65,6 +65,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("image:write", (_event, name, bytes) => storage.writeImage(name, bytes));
   ipcMain.handle("image:read", (_event, name) => storage.readImage(name));
   ipcMain.handle("image:sweep", (_event, keep) => storage.sweepImages(keep));
+  ipcMain.handle("image:list", () => storage.listImages());
   ipcMain.handle("export:choose", async () => {
     const result = await dialog.showOpenDialog({
       title: "Where should the pictures go?",

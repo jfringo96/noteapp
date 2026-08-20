@@ -9,10 +9,17 @@
  */
 
 import { applyChange, currentBoard, state } from "./store.js";
-import { BOARD_NAME_MAX, DEFAULT_SIZE, HOME_ID, MAP_MAX_DEPTH, uid } from "./constants.js";
+import {
+  BOARD_NAME_MAX,
+  DEFAULT_SIZE,
+  HOME_ID,
+  MAP_MAX_DEPTH,
+  UNTITLED_BOARD,
+  uid,
+} from "./constants.js";
 
 /** Creates an empty board and returns its id. Does not navigate. */
-export function createBoard(title = "Untitled board") {
+export function createBoard(title = UNTITLED_BOARD) {
   const id = uid("b");
 
   applyChange(() => {
@@ -230,7 +237,7 @@ export function describeContents(cards) {
 }
 
 /** Adds a board card and the board it points at, in one history entry. */
-export function addBoardCard(x, y, title = "Untitled board") {
+export function addBoardCard(x, y, title = UNTITLED_BOARD) {
   const boardId = uid("b");
   const cardId = uid("c");
   const size = DEFAULT_SIZE.board;

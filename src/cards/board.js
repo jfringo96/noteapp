@@ -14,7 +14,7 @@
  */
 
 import { boardFace, cleanBoardName, renameBoard } from "../boards.js";
-import { BOARD_NAME_MAX } from "../constants.js";
+import { BOARD_NAME_MAX, UNTITLED_BOARD } from "../constants.js";
 import { navigateTo } from "../navigation.js";
 import { imageUrl } from "../images.js";
 import { commitEdit, getCard, stashEdit, touch } from "../store.js";
@@ -48,6 +48,7 @@ export function build(card, el, body) {
   const name = document.createElement("textarea");
   name.className = "board-name";
   name.rows = 2;
+  name.placeholder = UNTITLED_BOARD;
   name.maxLength = BOARD_NAME_MAX;
   name.spellcheck = false;
   name.setAttribute("aria-label", "Board name");
@@ -81,7 +82,22 @@ export function build(card, el, body) {
     }
   });
 
-  name.addEventListener("blur", commitEdit);
+  /*
+   * A board left nameless gets called "Untitled board" when you look away.
+   * It starts empty so the caret is the only thing on it, and that is only
+   * comfortable if walking away can't leave a board with no name at all.
+   */
+  name.addEventListener("blur", () => {
+    const target = getCard(card.id);
+
+    if (target && target.targetBoardId && !name.value.trim()) {
+      name.value = UNTITLED_BOARD;
+      renameBoard(target.targetBoardId, UNTITLED_BOARD);
+      touch();
+    }
+
+    commitEdit();
+  });
 
   /*
    * Double-click opens the board. Single click just selects it, which is what

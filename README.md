@@ -130,6 +130,29 @@ Explorer. That works precisely because a collection is just a folder.
 (Older versions kept boards in `Documents\Board App\`, then loose in
 `Documents\Noteapp\`. Both are moved into place for you, once, on first start.)
 
+## Pictures
+
+**Image** in the left rail opens the collection's **gallery** — every picture it
+holds, whether a board is using it or not. Drag one out onto a board to place it
+where you want.
+
+Add pictures with **Add pictures…**, or just drop them straight onto a board;
+either way they end up in the gallery. Copying a picture from anywhere and
+pasting it works too.
+
+A picture used on five boards is still one file. Deleting one from the gallery
+tells you which boards are using it first, and takes it off those boards as
+well — Ctrl+Z undoes it.
+
+*Dragging an image out of a web page won't work: that hands over a web address,
+and Noteapp never goes online. Copy the picture and paste it instead.*
+
+## Adding cards
+
+Click anything in the left rail to drop it in the middle of the view, or **drag
+it out onto the board** to choose where it lands. Double-clicking empty canvas
+works too.
+
 ## Sending pictures to your phone
 
 **Export** writes every picture on the current board into a folder of JPEGs,

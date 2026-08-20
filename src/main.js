@@ -10,6 +10,7 @@ import {
   commitEdit,
   currentBoard,
   deleteCard,
+  galleryWasCreated,
   getCard,
   getSelectedId,
   redo,
@@ -25,6 +26,8 @@ import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
 import { initConfirm, isConfirmOpen } from "./confirm.js";
 import { deleteBoardWithPrompt } from "./deleteboard.js";
+import { initGalleryPanel, isGalleryOpen, openGallery, refreshGallery } from "./gallerypanel.js";
+import { addToGallery } from "./gallery.js";
 import { collectionName, initCollection } from "./collection.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
 
@@ -46,7 +49,7 @@ import { initLightbox, isOpen as lightboxOpen } from "./lightbox.js";
 
 import { setDropHandlers } from "./gestures.js";
 import { flush, initPersistence, loadFromDisk, scheduleSave } from "./persist.js";
-import { imageFilesFrom, sweepImages } from "./images.js";
+import { adoptLooseImages, imageFilesFrom, importImage, sweepImages } from "./images.js";
 import { cleanBoardName, isHome } from "./boards.js";
 
 const $ = (id) => document.getElementById(id);
@@ -138,6 +141,7 @@ setHooks({
 initCanvas($("scroller"), $("canvas"), $("picker"), setStatus);
 initPersistence(setStatus);
 initConfirm($("dialog"));
+initGalleryPanel($("gallery"), { status: setStatus, upload: uploadToGallery });
 initMap($("map"), $("mapBtn"), setStatus);
 initFileMenu($("fileMenu"), $("fileBtn"));
 
@@ -184,9 +188,62 @@ updateChrome();
 //
 // Only when loaded because an empty document references no images at all, so
 // sweeping against a failed read would delete every image on disk.
-if (loadResult === "loaded") sweepImages(state).catch(() => {});
+if (loadResult === "loaded") {
+  // Order matters. Adopting has to happen before the sweep, or the pictures it
+  // is there to rescue are deleted first — and only on the load that created
+  // the gallery, or a picture deleted on purpose would come back.
+  if (galleryWasCreated()) {
+    const adopted = await adoptLooseImages(addToGallery).catch(() => 0);
+    if (adopted) {
+      setStatus(
+        `Found ${adopted} picture${adopted === 1 ? "" : "s"} already in this collection — they're in the gallery`
+      );
+    }
+  }
+
+  sweepImages(state).catch(() => {});
+}
 
 /* --------------------------------------------------------------- toolbar --- */
+
+/**
+ * Adding pictures to the gallery without putting any of them on a board.
+ *
+ * Drag them out of the gallery afterwards, or leave them there — the point of
+ * the gallery is that a picture can exist in the collection without being
+ * anywhere in particular yet.
+ */
+function uploadToGallery() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.multiple = true;
+
+  input.addEventListener("change", async () => {
+    const files = imageFilesFrom(input.files);
+    let added = 0;
+
+    for (const file of files) {
+      try {
+        const fields = await importImage(file);
+        if (!fields) {
+          setStatus(`Could not read ${file.name}`);
+          continue;
+        }
+
+        addToGallery(fields, file.name || "");
+        added++;
+        refreshGallery();
+      } catch (err) {
+        setStatus(`Could not import ${file.name}: ${err.message}`);
+      }
+    }
+
+    if (added) setStatus(`Added ${added} picture${added === 1 ? "" : "s"} to the gallery`);
+  });
+
+  input.click();
+}
 
 /** Adding a card of any type, in the middle of what you can see. */
 function addAtCentre(type) {
@@ -197,15 +254,11 @@ function addAtCentre(type) {
     return;
   }
 
+  // Image opens the gallery instead of a file dialog. A picture belongs to the
+  // collection, not to whichever board you happened to be on when you imported
+  // it — so you pick from what's there, and drag it where you want.
   if (type === "image") {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.multiple = true;
-    input.addEventListener("change", () =>
-      addImageFiles(imageFilesFrom(input.files), point.x, point.y)
-    );
-    input.click();
+    openGallery();
     return;
   }
 
@@ -254,6 +307,9 @@ window.addEventListener("keydown", (event) => {
   // deletion, and Delete or Ctrl+Z arriving behind it would act on the board
   // underneath. The dialog handles its own Escape.
   if (isConfirmOpen()) return;
+
+  // And the gallery, which is full of pictures you could be about to delete.
+  if (isGalleryOpen()) return;
 
   const mod = event.ctrlKey || event.metaKey;
 

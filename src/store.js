@@ -28,6 +28,9 @@ export function emptyDoc() {
   return {
     version: 1,
     currentBoardId: HOME_ID,
+    // Every picture the collection holds, whether a board uses it or not.
+    // See gallery.js.
+    gallery: [],
     boards: {
       [HOME_ID]: { id: HOME_ID, title: HOME_TITLE, cards: [] },
     },
@@ -381,6 +384,8 @@ function normalise(doc) {
     changed = true;
   }
 
+  if (buildGallery(doc)) changed = true;
+
   for (const board of Object.values(doc.boards)) {
     if (board.title.length > BOARD_NAME_MAX) {
       board.title = board.title.slice(0, BOARD_NAME_MAX);
@@ -407,6 +412,63 @@ function normalise(doc) {
  * the old height. Dragging also clamps against these numbers, so leaving them
  * stale would put the card's edge in a different place from its picture.
  */
+/**
+ * Every picture on a board must also be in the gallery.
+ *
+ * The gallery arrived after the image cards did, so a collection from before it
+ * has pictures on boards and no gallery at all. Rather than migrate once and
+ * hope, this reconciles on every load: anything referenced that isn't listed
+ * gets listed. That also covers a document edited by hand, and an import.
+ *
+ * It never removes anything. A gallery entry with no card is the whole point.
+ */
+let galleryCreated = false;
+
+/**
+ * True when THIS load was the first one to give the document a gallery.
+ *
+ * Only then is it right to adopt loose files from the images folder: on any
+ * later load, a file on disk that the gallery does not list is a picture that
+ * was deleted and is waiting to be swept, and adopting it would resurrect it.
+ */
+export const galleryWasCreated = () => galleryCreated;
+
+function buildGallery(doc) {
+  galleryCreated = !Array.isArray(doc.gallery);
+  if (galleryCreated) doc.gallery = [];
+
+  const known = new Set(doc.gallery.map((entry) => entry.imageId));
+  let added = false;
+
+  const remember = (ref, name) => {
+    if (!ref || !ref.imageId || known.has(ref.imageId)) return;
+
+    known.add(ref.imageId);
+    doc.gallery.push({
+      imageId: ref.imageId,
+      mime: ref.mime,
+      naturalW: ref.naturalW,
+      naturalH: ref.naturalH,
+      name: name || "",
+      addedAt: 0, // unknown, and sorts to the end — it predates the gallery
+    });
+    added = true;
+  };
+
+  for (const board of Object.values(doc.boards)) {
+    remember(board.cover, board.title);
+
+    for (const card of board.cards) {
+      if (card.type === "image") remember(card, card.alt);
+      if (card.type === "column") {
+        for (const item of card.items) if (item.type === "image") remember(item, item.alt);
+      }
+    }
+  }
+
+  return added;
+}
+
 function fixBoardTile(card) {
   if (card.type !== "board") return false;
 

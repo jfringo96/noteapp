@@ -8,10 +8,20 @@
  * That reuse is the whole reason this app doesn't need a framework.
  */
 
-import { CANVAS_SIZE, CARD_TYPES, DEFAULT_SIZE, TYPE_LABEL, clamp } from "./constants.js";
+import {
+  CANVAS_SIZE,
+  CARD_TYPES,
+  DEFAULT_SIZE,
+  IMAGE_CARD_EDGE,
+  TYPE_LABEL,
+  clamp,
+} from "./constants.js";
 import { addCard, currentBoard, getSelectedId, select } from "./store.js";
 import { addBoardCard, linkBoard } from "./boards.js";
 import { BOARD_DRAG_TYPE } from "./map.js";
+import { IMAGE_DRAG_TYPE } from "./gallerypanel.js";
+import { addToGallery, galleryEntry } from "./gallery.js";
+import { CARD_DRAG_TYPE } from "./inspector.js";
 import { buildCard, updateCard } from "./cards/index.js";
 import { initDrop } from "./drop.js";
 import { imageFilesFrom, importImage } from "./images.js";
@@ -210,7 +220,33 @@ function initDropTarget() {
       return;
     }
 
-    addImageFiles(imageFilesFrom(event.dataTransfer.files), point.x, point.y);
+    const imageId = event.dataTransfer.getData(IMAGE_DRAG_TYPE);
+    if (imageId) {
+      dropGalleryImage(imageId, point.x, point.y);
+      return;
+    }
+
+    const cardType = event.dataTransfer.getData(CARD_DRAG_TYPE);
+    if (cardType) {
+      dropNewCard(cardType, point.x, point.y);
+      return;
+    }
+
+    const files = imageFilesFrom(event.dataTransfer.files);
+    if (files.length) {
+      addImageFiles(files, point.x, point.y);
+      return;
+    }
+
+    /*
+     * An image dragged out of a web page arrives as a URL, not as bytes —
+     * fetching it would be the app's first outbound request, and it doesn't
+     * make any. Copying the picture puts the actual bitmap on the clipboard,
+     * which needs no network at all, so say so rather than failing silently.
+     */
+    if ([...event.dataTransfer.types].some((type) => type === "text/uri-list" || type === "text/html")) {
+      onImportError("Noteapp never goes online, so it can't fetch that. Copy the picture and paste it here instead.");
+    }
   });
 }
 
@@ -220,6 +256,61 @@ function initDropTarget() {
  * Centred on the pointer, like every other drop, and clamped so a tile aimed
  * at the edge of the canvas doesn't end up half outside it.
  */
+function dropGalleryImage(imageId, x, y) {
+  const entry = galleryEntry(imageId);
+  if (!entry) {
+    onImportError("That picture is no longer in the gallery.");
+    return;
+  }
+
+  const size = cardSizeFor(entry);
+
+  addCard(
+    "image",
+    clamp(x - size.w / 2, 0, CANVAS_SIZE - size.w),
+    clamp(y - size.h / 2, 0, CANVAS_SIZE - size.h),
+    {
+      imageId: entry.imageId,
+      mime: entry.mime,
+      naturalW: entry.naturalW,
+      naturalH: entry.naturalH,
+      alt: entry.name || "",
+      ...size,
+    }
+  );
+}
+
+/** Fits a gallery picture into a sensible card without distorting it. */
+function cardSizeFor(entry) {
+  const scale = Math.min(1, IMAGE_CARD_EDGE / entry.naturalW, IMAGE_CARD_EDGE / entry.naturalH);
+  return {
+    w: Math.max(1, Math.round(entry.naturalW * scale)),
+    h: Math.max(1, Math.round(entry.naturalH * scale)),
+  };
+}
+
+/**
+ * A card type dragged out of the left rail.
+ *
+ * Clicking a rail button still drops the card in the middle of the view, which
+ * is right when you don't care where it goes. Dragging is for when you do.
+ */
+function dropNewCard(type, x, y) {
+  const size = DEFAULT_SIZE[type];
+  if (!size) return;
+
+  const left = clamp(x - size.w / 2, 0, CANVAS_SIZE - size.w);
+  const top = clamp(y - size.h / 2, 0, CANVAS_SIZE - size.h);
+
+  if (type === "board") {
+    createBoardCard(left, top);
+    return;
+  }
+
+  addCard(type, left, top);
+  focusNewCard(type, getSelectedId());
+}
+
 function dropBoard(boardId, x, y) {
   const size = DEFAULT_SIZE.board;
 
@@ -263,6 +354,11 @@ export async function addImageFiles(files, x, y) {
         continue;
       }
 
+      // Into the gallery first: a picture belongs to the collection, and the
+      // card on this board is one use of it. Dropping onto a board and adding
+      // in the gallery are the same import either way round.
+      addToGallery(fields, file.name || "");
+
       addCard("image", clamp(x + offset, 0, CANVAS_SIZE - fields.w), y, {
         ...fields,
         alt: file.name || "",
@@ -287,7 +383,12 @@ export async function addImageFiles(files, x, y) {
  * selected, which is what this does.
  */
 export function createBoardCard(x, y) {
-  const { cardId } = addBoardCard(x, y);
+  // Nameless on purpose. A new board used to arrive called "Untitled board"
+  // with the words selected, so the first thing you saw was a block of
+  // highlight to type over. Empty with a caret in it says the same thing more
+  // quietly — and `board.js` names it "Untitled board" if you click away
+  // without typing, so nothing is ever left without a name.
+  const { cardId } = addBoardCard(x, y, "");
   select(cardId);
 
   const el = elements.get(cardId);
@@ -296,7 +397,6 @@ export function createBoardCard(x, y) {
   // select() above added `is-selected`, which is what lets the name take the
   // pointer and the caret at all.
   el.__boardName.focus();
-  el.__boardName.select();
 }
 
 
