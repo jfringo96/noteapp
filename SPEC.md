@@ -462,11 +462,13 @@ first — otherwise merely walking between boards lands in the undo stack.
 
 ### Deleting
 
-Two different actions, named apart because they are not the same thing:
+**A tile is the board.** Deleting a board tile deletes the board it points at —
+a tile is not a shortcut to a board or a copy of one, it is where that board is.
+There is no separate "unlink this" action.
 
-- **Remove** (in the inspector, on a selected tile) takes the tile away. The
-  board carries on existing and is still in the Map.
-- **Delete** (the × in the Map) ends the board.
+One rule, three ways in: the × in the inspector, the × in the Map, and the
+Delete key on a selected tile. They share an implementation so they cannot
+drift apart.
 
 Deleting a board takes with it everything on that board — notes, lists, links,
 places, columns and the image cards — and **every tile pointing at it**, on any
@@ -477,6 +479,9 @@ be linked from here, so the confirmation lists them and you tick the ones that
 should go too, with Select all / Select none. Nothing is ticked to begin with:
 the safe answer should be the one you get by not thinking about it. Boards left
 out survive **unlinked** and appear in the Map.
+
+The **only** way a board ends up alive but unlinked is being kept when its
+parent was deleted. Nothing else strands one.
 
 **A board can be dragged out of the Map onto a canvas** to put a tile there.
 That is the way back for an unlinked board, and the only reason leaving boards

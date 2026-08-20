@@ -69,16 +69,17 @@ That's how an unlinked board finds a home again.
 
 ## Deleting
 
-Two different things, and they're named apart:
+**Deleting a board tile deletes the board.** A tile isn't a shortcut or a copy —
+it's where that board lives. Delete it from the inspector, from the Map, or with
+the Delete key; all three do the same thing and all three ask first.
 
-- **Remove** (in the inspector, with a tile selected) takes away *the tile*. The
-  board itself carries on existing — you'll find it in the Map.
-- **Delete** (the × in the Map) ends *the board*.
+It takes everything on that board with it — notes, lists, links, pictures — and
+removes every other tile pointing at it, wherever those are.
 
-Deleting a board takes everything on it — notes, lists, links, pictures — and
-removes every tile pointing at it, wherever those are. If there are boards
-nested inside it, you get a list and tick the ones that should go too. Anything
-you leave stays in the Map, unlinked, ready to be dragged back onto a board.
+If there are boards nested inside, you get a list and tick which should go too,
+with Select all and Select none. Nothing starts ticked. **Anything you leave
+stays in the Map, unlinked**, ready to be dragged back onto a board — and that's
+the only way a board ever ends up unlinked.
 
 Ctrl+Z undoes any of it. Pictures are only deleted from disk when nothing else
 is using them, so a photo on two boards survives losing one of them.

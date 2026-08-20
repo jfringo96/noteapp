@@ -10,6 +10,7 @@ import {
   commitEdit,
   currentBoard,
   deleteCard,
+  getCard,
   getSelectedId,
   redo,
   setHooks,
@@ -23,6 +24,7 @@ import { moveCard } from "./move.js";
 import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
 import { initConfirm, isConfirmOpen } from "./confirm.js";
+import { deleteBoardWithPrompt } from "./deleteboard.js";
 import { collectionName, initCollection } from "./collection.js";
 import { canGoBack, crumbs, goBack, initNavigation, navigateTo, normaliseTrail } from "./navigation.js";
 
@@ -273,6 +275,16 @@ window.addEventListener("keydown", (event) => {
     if (!id) return;
     event.preventDefault();
     hidePicker();
+
+    // A board tile is the board, so the key has to go through the same prompt
+    // the two × buttons do rather than quietly removing something much larger
+    // than the tile you were looking at.
+    const card = getCard(id);
+    if (card && card.type === "board") {
+      deleteBoardWithPrompt(card.targetBoardId, { cardId: id, status: setStatus });
+      return;
+    }
+
     deleteCard(id);
   }
 });

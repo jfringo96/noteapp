@@ -20,8 +20,8 @@ import {
   stashEdit,
   touch,
 } from "./store.js";
-import { boardFace, setBoardCover } from "./boards.js";
-import { confirmDelete } from "./confirm.js";
+import { setBoardCover } from "./boards.js";
+import { deleteBoardWithPrompt } from "./deleteboard.js";
 import { importImage } from "./images.js";
 import { openLink } from "./cards/link.js";
 import { openPlace } from "./cards/place.js";
@@ -195,36 +195,20 @@ function openPlaceTool(card) {
 }
 
 /**
- * Removing a board card asks first, in the same dialog the Map's delete uses.
+ * Deleting a board tile deletes the board.
  *
- * These are two genuinely different actions wearing the same × in the old
- * design, so they are named apart now: this one is **Remove**, and it takes
- * away the tile while the board carries on existing. The Map's is **Delete**,
- * and that one is the end of the board.
+ * A tile is not a shortcut to a board or a copy of one — it is where that board
+ * is. So there is no separate "just unlink this" action: the only way a board
+ * ends up alive but unlinked is being kept when its parent was deleted.
  *
- * It used to arm itself on the first click instead, to avoid a modal. That
- * held until deleting a board had to ask which boards inside it went too —
- * once one of them was a dialog, having the other be a button that changes its
- * own label was two answers to the same question.
+ * The prompt, the checklist of boards inside it and the rules all live in
+ * `deleteboard.js`, shared with the Map's × and the Delete key, so the three
+ * routes cannot drift apart.
  */
 function deleteTool(card) {
-  const button = tool("Remove", "×", async () => {
-    const face = boardFace(card.targetBoardId);
-    const name = face ? face.title || "Untitled" : "this tile";
-
-    const answer = await confirmDelete({
-      title: `Remove ${name} from this board?`,
-      message:
-        "The board itself is not deleted — it stays in the Map, and you can drag it " +
-        "back onto any board from there.",
-      confirmLabel: "Remove tile",
-    });
-
-    if (answer === null) return;
-
-    deleteCard(card.id);
-    onStatus("Tile removed — the board itself is still in the Map.");
-  });
+  const button = tool("Delete", "×", () =>
+    deleteBoardWithPrompt(card.targetBoardId, { cardId: card.id, status: onStatus })
+  );
 
   button.classList.add("tool-danger");
   return button;

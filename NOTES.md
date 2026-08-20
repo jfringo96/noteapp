@@ -490,15 +490,29 @@ something a button can arm into. Once one of the two deletions was a dialog,
 having the other be a self-relabelling button meant two different answers to the
 same question, so both are dialogs now.
 
-They are also named apart, which the old design never did — both were "Delete":
-
-| | What it does |
-|---|---|
-| **Remove** (inspector, on a selected tile) | Takes the tile away. The board carries on existing, in the Map. |
-| **Delete** (the × in the Map) | Ends the board. |
-
 Focus lands on Cancel, never on the destructive button, so a stray Enter
 arriving just as the dialog opens does nothing.
+
+### A tile IS the board
+
+Briefly there were two named actions — Remove, which took away the tile and
+left the board alive in the Map, and Delete, which ended the board. Wrong.
+Deleting a board tile deletes the board.
+
+The distinction only looks reasonable if you think of a tile as a shortcut to a
+board. It isn't: it is where that board *is*. Being able to take one away and
+have the board persist somewhere else meant deleting something never actually
+deleted it, which is the opposite of what the word does everywhere else.
+
+So there is one rule with three ways in — the × in the inspector, the × in the
+Map, the Delete key on a selected tile — sharing `deleteboard.js` so they can't
+drift. The **only** thing that leaves a board alive but unlinked is choosing to
+keep it when its parent is deleted.
+
+Two tiles still have to be removable without deleting anything, and both are
+about a board that can't be deleted rather than shouldn't: a tile pointing at
+Home, and a tile left by a hand-edited file whose board is already gone. Those
+offer "Remove tile" and say why.
 
 ### Boards drag out of the Map to be re-linked
 

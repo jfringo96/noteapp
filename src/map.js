@@ -10,8 +10,8 @@
  * behave sensibly here.
  */
 
-import { boardTree, deleteBoard, isHome, nestedBoards } from "./boards.js";
-import { confirmDelete } from "./confirm.js";
+import { boardTree, isHome } from "./boards.js";
+import { deleteBoardWithPrompt } from "./deleteboard.js";
 import { navigateTo } from "./navigation.js";
 import { state } from "./store.js";
 import { createPanel } from "./panel.js";
@@ -130,38 +130,10 @@ function deleteButton(node) {
   remove.setAttribute("aria-label", `Delete ${node.title || "Untitled"}`);
 
   remove.addEventListener("click", async () => {
-    const name = node.title || "Untitled";
-    const nested = nestedBoards(node.id);
-
     // The panel is dismissed by any pointerdown outside it, and the dialog is
     // outside it. Close it deliberately instead of letting that race.
     panel.hide();
-
-    const answer = await confirmDelete({
-      title: `Delete ${name}?`,
-      message:
-        "Everything on this board goes with it — notes, lists, links and pictures. " +
-        "Ctrl+Z puts it back.",
-      choices: nested,
-      choicesLabel: nested.length
-        ? "There are boards inside it. Tick any that should be deleted too — the rest stay in the Map, unlinked."
-        : "",
-      confirmLabel: "Delete board",
-    });
-
-    if (answer === null) return;
-
-    if (!deleteBoard(node.id, answer)) {
-      onStatus("That board can't be deleted.");
-      return;
-    }
-
-    const kept = nested.length - answer.length;
-    onStatus(
-      `Deleted ${name}` +
-        (kept > 0 ? ` — ${kept} board${kept === 1 ? "" : "s"} left unlinked, find them in the Map` : "") +
-        " — Ctrl+Z to undo"
-    );
+    await deleteBoardWithPrompt(node.id, { status: onStatus });
   });
 
   return remove;
