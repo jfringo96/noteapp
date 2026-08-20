@@ -21,7 +21,6 @@ import {
 import {
   addCard,
   currentBoard,
-  getCard,
   getSelectedId,
   getSelectedIds,
   select,
@@ -74,23 +73,37 @@ export function initCanvas(scrollerEl, canvasEl, pickerEl, errorCallback) {
       return;
     }
 
-    // Right drags the board around, left draws a selection box over it. Panning
-    // was on the left until marquee selection needed that button more; the
-    // board is something you reach for constantly, so it went to the button
-    // nothing else was using rather than behind a modifier key.
-    if (event.button === 2) {
-      startPan(event);
-      return;
-    }
-
-    if (event.button !== 0) return;
+    if (event.button !== 0) return; // right-drag pans, and is handled below
 
     select(null);
     startMarquee(event);
   });
 
+  /*
+   * Right-drag moves the board, from ANYWHERE — over a card as much as over
+   * empty space. On the scroller rather than the canvas so it works while the
+   * pointer is over something; card dragging ignores every button but the left
+   * one, so nothing competes for it.
+   *
+   * Panning was on the left button until marquee selection needed it more. The
+   * board is something you reach for constantly, so it went to the button
+   * nothing else was using rather than behind a modifier key.
+   *
+   * Text fields are left alone: right-clicking in one should still offer cut
+   * and paste, which is worth more there than panning is.
+   */
+  const isEditableTarget = (target) => !!target.closest("input, textarea, [contenteditable]");
+
+  scroller.addEventListener("pointerdown", (event) => {
+    if (event.button !== 2 || isEditableTarget(event.target)) return;
+    startPan(event);
+  });
+
   // Or the OS menu appears every time you go to move the board.
-  canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+  scroller.addEventListener("contextmenu", (event) => {
+    if (isEditableTarget(event.target)) return;
+    event.preventDefault();
+  });
 
   canvas.addEventListener("dblclick", (event) => {
     if (event.target !== canvas) return;

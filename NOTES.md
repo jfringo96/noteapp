@@ -793,6 +793,44 @@ The three drag thresholds are one constant now. Card dragging, panning and the
 marquee all answer the same question — was that a click? — and answering it
 differently in different places is how a click starts landing sometimes.
 
+### A bundler will not tell you an identifier is missing
+
+The Draw menu shipped referencing `openDrawMenu`, which was never defined —
+an edit that was supposed to insert it matched nothing and failed silently.
+`vite build` succeeded, every unit suite passed, and the app was broken at
+boot: the reference is evaluated while wiring the inspector, so nothing
+rendered at all.
+
+Nothing in the toolchain catches this. A bundler only resolves *imports*; a
+free identifier is a runtime error and runtime is the only place it shows up.
+
+Two things came out of it, and both are worth keeping:
+
+- **Launching the app is part of finishing a change**, not a nicety. It is the
+  only check that runs the module.
+- A scan for called functions that resolve to neither a local declaration nor an
+  import would have caught it in a second. Run one after a batch of edits; it
+  found this and nothing else.
+
+### Fixes from a clean-up pass
+
+- **A column would accept anything.** `COLUMNABLE` listed what a stack can hold
+  and nothing enforced it — only "columns never nest" was checked. A line
+  dragged over a column was filed into it, where it has no coordinates to be
+  drawn between. Enforced now in `move.js`, where the move happens, and in
+  `drop.js` as well so the drop line never appears over a column that would
+  refuse the card anyway.
+- **Moving a group onto a board was one history entry per card.** Dragging five
+  cards across took five presses of Ctrl+Z to undo. `moveCards()` does the lot
+  in one `applyChange`. Repositioning a group already worked this way, which is
+  what made the difference obvious.
+- **Right-drag only panned from empty space.** With panning on the right button
+  it should work wherever the pointer is, including over a card — card dragging
+  ignores every button but the left one, so nothing competes for it. Text fields
+  are excluded: right-clicking in one should still offer cut and paste.
+- The Draw menu anchored itself with `querySelector('.tool[title^="Draw"]')`,
+  which breaks the moment the tooltip is reworded. It has an id now.
+
 ## Deferred
 
 - **Confirmation on ordinary card deletes** (handoff §5.5). Undo is one

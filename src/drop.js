@@ -7,6 +7,7 @@
  */
 
 import { currentBoard, getCard, state } from "./store.js";
+import { COLUMNABLE } from "./constants.js";
 import { dropIndexAt, showDropLine } from "./cards/column.js";
 
 let elementFor = () => null;
@@ -51,9 +52,12 @@ export function resolveDrop(clientX, clientY, cardId, { lifted } = {}) {
     }
 
     if (card.type === "column" && !card.collapsed) {
-      // Columns never nest.
+      // A column holds cards, not everything. Columns never nest, and a line
+      // is geometry on the board — inside a stack it has no coordinates to be
+      // drawn from. Checked here as well as in move.js so the drop line never
+      // appears over a column that would refuse the card anyway.
       const dragged = getCard(cardId);
-      if (dragged && dragged.type === "column") continue;
+      if (dragged && !COLUMNABLE.includes(dragged.type)) continue;
 
       return { kind: "column", columnId: card.id, index: dropIndexAt(el, clientY, cardId), el };
     }

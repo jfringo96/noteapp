@@ -22,7 +22,7 @@ import {
   undo,
 } from "./store.js";
 
-import { moveCard } from "./move.js";
+import { moveCard, moveCards } from "./move.js";
 import { hideMap, initMap, refreshMap } from "./map.js";
 import { initFileMenu } from "./filemenu.js";
 import { arrowIcon, lineIcon } from "./icons.js";
@@ -173,13 +173,20 @@ setDropHandlers({
   resolve: resolveDrop,
   feedback: showDropFeedback,
   elements: elementFor,
-  commit: (cardId, destination) => {
-    if (!moveCard(cardId, destination)) return false;
+  commit: (ids, destination) => {
+    const moved = ids.length > 1 ? moveCards(ids, destination) : moveCard(ids[0], destination);
+    if (!moved) return false;
 
-    // Moving to another board takes the card off-screen, so say where it went.
-    // Moves within this board are visible and need no commentary.
+    // Moving to another board takes the cards off-screen, so say where they
+    // went. Moves within this board are visible and need no commentary.
     if (destination.kind === "board") {
-      setStatus(`Moved to ${state.boards[destination.boardId].title} — Ctrl+Z to undo`);
+      const where = state.boards[destination.boardId].title;
+      const what = ids.length > 1 ? `${ids.length} cards` : "Moved";
+      setStatus(
+        ids.length > 1
+          ? `${what} moved to ${where} — Ctrl+Z to undo`
+          : `Moved to ${where} — Ctrl+Z to undo`
+      );
     }
 
     return true;
@@ -224,6 +231,61 @@ if (loadResult === "loaded") {
 }
 
 /* --------------------------------------------------------------- toolbar --- */
+
+/* ------------------------------------------------------------------ draw --- */
+
+/**
+ * The two things Draw offers, in a little menu beside the rail button.
+ *
+ * A menu rather than two more rail buttons, because they are one idea with a
+ * choice inside it. Picking one arms the canvas for a single line — see
+ * `armDrawing` — so you cannot end up in a drawing mode you have forgotten
+ * about, eating the next click.
+ */
+const drawMenuEl = $("drawMenu");
+
+function openDrawMenu() {
+  if (!drawMenuEl.hidden) {
+    closeDrawMenu();
+    return;
+  }
+
+  drawMenuEl.replaceChildren(
+    drawChoice("Line", lineIcon(), "none"),
+    drawChoice("Arrow", arrowIcon(), "arrow")
+  );
+
+  drawMenuEl.hidden = false;
+
+  // Anchored to the rail button that opened it.
+  const button = document.getElementById("drawBtn");
+  const box = button ? button.getBoundingClientRect() : { right: 72, top: 96 };
+  drawMenuEl.style.left = box.right + 6 + "px";
+  drawMenuEl.style.top = box.top + "px";
+}
+
+function closeDrawMenu() {
+  drawMenuEl.hidden = true;
+}
+
+function drawChoice(label, icon, head) {
+  const item = menuItem(label, "Drag on the board", () => {
+    closeDrawMenu();
+    armDrawing(head);
+    setStatus(`Drag on the board to draw ${head === "arrow" ? "an arrow" : "a line"}`);
+  });
+
+  item.prepend(icon);
+  item.classList.add("menu-item-icon");
+  return item;
+}
+
+window.addEventListener("pointerdown", (event) => {
+  if (drawMenuEl.hidden) return;
+  if (drawMenuEl.contains(event.target)) return;
+  if (event.target.closest("#drawBtn")) return;
+  closeDrawMenu();
+});
 
 /**
  * Adding pictures to the gallery without putting any of them on a board.

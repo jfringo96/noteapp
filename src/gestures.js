@@ -196,13 +196,9 @@ export function attachDrag(surface, el, cardId, scroller, { lifted = false } = {
     const card = getCard(cardId);
     if (!card) return;
 
-    if (destination && commitDrop(cardId, destination)) {
-      // The group follows it. Each is moved separately because a destination
-      // describes one card's landing, and every card has to survive the trip
-      // even if one of them has gone in the meantime.
-      for (const id of companions) commitDrop(id, destination);
-      return;
-    }
+    // The whole group is handed over together, so moving five cards onto a
+    // board is one entry in the history rather than five.
+    if (destination && commitDrop([cardId, ...companions], destination)) return;
 
     // Nothing to drop onto. A canvas card is repositioned where you left it; a
     // card lifted out of a column snaps back, because it has no x/y to land on.

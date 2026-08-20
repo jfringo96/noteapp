@@ -404,8 +404,9 @@ appearing in the card picker. Not a connector: it is not attached to anything.
 to reorder, and drag them back out onto the canvas. A line shows where a card
 will land. Resizes from the bottom-right like any other card.
 
-Columns hold anything except another column — boards included, which is the
-main reason to want them.
+Columns hold anything in `COLUMNABLE` — boards included, which is the main
+reason to want them. Not another column, and not a line: a line is drawn between
+two points on the board, and inside a stack there is nothing to draw between.
 
 ---
 

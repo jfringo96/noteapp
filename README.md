@@ -34,6 +34,17 @@ to do and writing down in `NOTES.md`.
 
 ---
 
+## The gestures, in one place
+
+| | |
+|---|---|
+| **Right-drag** | Move the board around, from anywhere |
+| **Left-drag** empty space | Draw a selection box over several cards |
+| **Double-click** empty space | Add a card here |
+| **Drag from the left rail** | Place a card exactly where you drop it |
+| **Double-click** a board tile | Open that board |
+| **Ctrl+Z / Ctrl+Shift+Z** | Undo / redo |
+
 ## Using it day to day
 
 Double-click **`Start Noteapp (dev).cmd`**. It starts everything and opens the
@@ -168,7 +179,8 @@ between cards.
 
 ## Getting around a board
 
-**Right-drag** empty space to move the board around.
+**Right-drag anywhere** — over a card or over empty space — to move the board
+around.
 
 **Left-drag** empty space to draw a selection box — everything it touches gets
 outlined. Drag the group to move it all at once, drop it onto a board to file it
@@ -180,6 +192,10 @@ deselects, and double-clicking still opens the card picker.
 Click anything in the left rail to drop it in the middle of the view, or **drag
 it out onto the board** to choose where it lands. Double-clicking empty canvas
 works too.
+
+A **column** holds text, lists, pictures, links, places and boards — but not
+another column, and not a line. A line is drawn between two points on the board,
+so inside a stack it would have nothing to be drawn between.
 
 ## Sending pictures to your phone
 
@@ -212,13 +228,18 @@ framework, on purpose — the state flow should be followable without learning
 someone else's mental model first.
 
 ```
-electron/     the window, and everything that touches disk
-src/          the app itself
-  cards/      one file per card type
-  store.js    the single state object and applyChange()
-  collection.js  opening, creating and saving-as collections
-  map.js      the nested Map of every board
-prototype-tests/  frozen record of the Phase 1 prototype
+electron/          the window, and everything that touches disk
+src/
+  store.js         the single state object and applyChange() — read this first
+  canvas.js        the board: rendering, panning, the marquee, drawing lines
+  cards/           one file per card type, plus line.js for strokes
+  boards.js        boards, the Map tree, and what deleting one does
+  collection.js    opening, creating and saving-as collections
+  gallery.js       the collection's pictures; gallerypanel.js is its drawer
+  gestures.js      dragging and resizing, including dragging a group
+  drop.js          where a dragged card would land
+  inspector.js     the left rail
+prototype-tests/   frozen record of the Phase 1 prototype
 ```
 
 The whole document is one plain object, every mutation goes through one

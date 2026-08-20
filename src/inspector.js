@@ -180,6 +180,8 @@ function deleteManyTool(ids) {
  */
 function drawTool() {
   const button = tool("Draw", drawIcon(), () => onDraw());
+  // The menu it opens anchors itself to this button and needs to find it.
+  button.id = "drawBtn";
   button.title = "Draw a line or an arrow";
   return button;
 }

@@ -13,6 +13,7 @@
  */
 
 import { applyChange, currentBoard, findCardEntry, state } from "./store.js";
+import { COLUMNABLE } from "./constants.js";
 
 export function moveCard(cardId, destination) {
   const entry = findCardEntry(cardId);
@@ -28,8 +29,10 @@ export function moveCard(cardId, destination) {
 }
 
 function intoColumn(cardId, card, entry, { columnId, index }) {
-  // Columns never nest. One level, no recursion.
-  if (card.type === "column") return false;
+  // Columns never nest, and not every card is a thing a stack can hold — a
+  // line is drawn between two points on the board and has nothing to draw
+  // between once it is a row. `COLUMNABLE` is the list; this is where it bites.
+  if (!COLUMNABLE.includes(card.type)) return false;
 
   const column = currentBoard().cards.find((c) => c.id === columnId);
   if (!column || column.type !== "column") return false;
@@ -84,6 +87,40 @@ function ontoBoard(cardId, boardId) {
     const from = findCardEntry(cardId);
     const [moved] = from.list.splice(from.index, 1);
     state.boards[boardId].cards.push(moved);
+  });
+
+  return true;
+}
+
+/**
+ * Moves several cards at once, as ONE change.
+ *
+ * Only onto another board. A column drop asks where in the stack each card
+ * goes, and there is no honest answer for several at once — see the drag
+ * handler, which turns a group over a column into a reposition instead.
+ *
+ * One `applyChange` for the lot, so undo brings the whole group back in a
+ * single press rather than one card at a time.
+ */
+export function moveCards(ids, destination) {
+  if (destination.kind !== "board") return false;
+
+  const boardId = destination.boardId;
+  if (!state.boards[boardId]) return false;
+
+  // Checked before the change, so a group that has nothing to move doesn't
+  // leave an empty entry in the history.
+  const movable = ids.filter((id) => findCardEntry(id));
+  if (!movable.length) return false;
+
+  applyChange(() => {
+    for (const id of movable) {
+      const from = findCardEntry(id);
+      if (!from) continue;
+
+      const [card] = from.list.splice(from.index, 1);
+      state.boards[boardId].cards.push(card);
+    }
   });
 
   return true;
